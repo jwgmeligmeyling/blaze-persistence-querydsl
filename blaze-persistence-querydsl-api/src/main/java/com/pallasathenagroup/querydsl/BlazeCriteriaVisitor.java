@@ -63,7 +63,15 @@ public class BlazeCriteriaVisitor<T> {
                 }
             }
 
-            if (target instanceof Path<?>) {
+            if (target instanceof ValuesExpression<?>) {
+                ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
+                if ( valuesExpression.isIdentifiable() ) {
+                    criteriaBuilder.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                } else {
+                    criteriaBuilder.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                }
+            }
+            else if (target instanceof Path<?>) {
                 Path<?> entityPath = (Path<?>) target;
                 if (alias == null) {
                     alias = entityPath.getMetadata().getName();

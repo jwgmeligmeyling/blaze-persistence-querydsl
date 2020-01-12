@@ -2,45 +2,48 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.NonUniqueResultException;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
-import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Path;
-import com.querydsl.core.types.Predicate;
 import com.querydsl.jpa.JPQLTemplates;
-import com.querydsl.jpa.impl.JPAQuery;
+import com.querydsl.jpa.impl.AbstractJPAQuery;
+import com.querydsl.jpa.impl.JPAProvider;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
-public class BlazeJPAQuery<T> extends JPAQuery<T> {
+public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
 
     public BlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
+        super(null, JPQLTemplates.DEFAULT, new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
     public BlazeJPAQuery(EntityManager em, CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(em);
+        super(em, JPAProvider.getTemplates(em), new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
     public BlazeJPAQuery(EntityManager em, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(em, metadata);
+        super(em, JPAProvider.getTemplates(em), metadata);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
     public BlazeJPAQuery(EntityManager em, JPQLTemplates templates, CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(em, templates);
+        super(em, templates, new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
@@ -48,6 +51,17 @@ public class BlazeJPAQuery<T> extends JPAQuery<T> {
         super(em, templates, metadata);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
+
+    public <X> BlazeJPAQuery<T> fromValues(EntityPath<X> path, Collection<X> elements) {
+        this.queryMixin.from(new ValuesExpression<>(path, elements, false));
+        return this;
+    }
+
+    public <X> BlazeJPAQuery<T> fromIdentifiableValues(EntityPath<X> path, Collection<X> elements) {
+        this.queryMixin.from(new ValuesExpression<>(path, elements, true));
+        return this;
+    }
+
 
     @Override
     public Query createQuery() {
@@ -75,44 +89,49 @@ public class BlazeJPAQuery<T> extends JPAQuery<T> {
             return criteriaBuilder.getCountQuery();
         }
 
-        return criteriaBuilder.getQuery();
+        TypedQuery<Tuple> query = criteriaBuilder.getQuery();
+
+        if (lockMode != null) {
+            query.setLockMode(lockMode);
+        }
+        if (flushMode != null) {
+            query.setFlushMode(flushMode);
+        }
+
+        for (Map.Entry<String, Object> entry : hints.entries()) {
+            query.setHint(entry.getKey(), entry.getValue());
+        }
+
+        return query;
     }
 
-    // Covariant overrides
 
     @Override
-    public BlazeJPAQuery<T> from(EntityPath<?> arg) {
-        return (BlazeJPAQuery<T>) super.from(arg);
+    public BlazeJPAQuery<T> clone(EntityManager entityManager, JPQLTemplates templates) {
+        BlazeJPAQuery<T> q = new BlazeJPAQuery<T>(entityManager, templates, getMetadata().clone(), criteriaBuilderFactory);
+        q.clone(this);
+        return q;
     }
 
     @Override
-    public BlazeJPAQuery<T> from(EntityPath<?>... args) {
-        return (BlazeJPAQuery<T>) super.from(args);
-    }
-
-    @Override
-    public <P> BlazeJPAQuery<T> from(CollectionExpression<?, P> target, Path<P> alias) {
-        return (BlazeJPAQuery<T>) super.from(target, alias);
+    public BlazeJPAQuery<T> clone(EntityManager entityManager) {
+        return clone(entityManager, JPAProvider.getTemplates(entityManager));
     }
 
     @Override
     public <U> BlazeJPAQuery<U> select(Expression<U> expr) {
-        return (BlazeJPAQuery<U>) super.select(expr);
+        queryMixin.setProjection(expr);
+        @SuppressWarnings("unchecked") // This is the new type
+                BlazeJPAQuery<U> newType = (BlazeJPAQuery<U>) this;
+        return newType;
     }
 
     @Override
     public BlazeJPAQuery<Tuple> select(Expression<?>... exprs) {
-        return (BlazeJPAQuery<Tuple>) super.select(exprs);
-    }
-
-    @Override
-    public BlazeJPAQuery<T> where(Predicate o) {
-        return (BlazeJPAQuery<T>) super.where(o);
-    }
-
-    @Override
-    public BlazeJPAQuery<T> where(Predicate... o) {
-        return (BlazeJPAQuery<T> ) super.where(o);
+        queryMixin.setProjection(exprs);
+        @SuppressWarnings("unchecked") // This is the new type
+                BlazeJPAQuery<Tuple> newType = (BlazeJPAQuery<Tuple>) this;
+        return newType;
     }
 
     // Work around private access to query(...)

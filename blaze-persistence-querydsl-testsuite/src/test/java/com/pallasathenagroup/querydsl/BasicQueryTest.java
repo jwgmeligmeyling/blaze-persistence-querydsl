@@ -14,6 +14,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -118,6 +119,22 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
                     .where("length(field)").gt(1)
                     .getResultList();
             Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
+    public void testFromValues() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .fromValues(book, Collections.singleton(theBook))
+                    .select(book)
+                    .fetch();
+
+            System.out.println(fetch);
         });
     }
 }
