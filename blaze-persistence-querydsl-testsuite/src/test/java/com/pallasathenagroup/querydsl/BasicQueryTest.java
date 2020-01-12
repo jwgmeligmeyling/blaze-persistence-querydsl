@@ -95,6 +95,18 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
 
+    @Test
+    public void testEntityJoin() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            QAuthor otherAuthor = new QAuthor("otherAuthor");
+            QBook otherBook = new QBook("otherBook");
+            Map<Author, List<Book>> booksByAuthor = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .from(otherAuthor)
+                    .innerJoin(otherBook).on(otherBook.author.eq(otherAuthor))
+                    .transform(GroupBy.groupBy(otherAuthor).as(GroupBy.list(otherBook)));
+        });
+    }
+
 
 
     @Test
