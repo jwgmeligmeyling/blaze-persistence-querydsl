@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
+import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static org.hibernate.testing.transaction.TransactionUtil.doInJPA;
@@ -32,7 +33,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Override
     protected Class<?>[] getAnnotatedClasses() {
-        return new Class<?>[] { TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class };
+        return new Class<?>[] { TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class, IdHolderCte.class };
     }
 
     @Before
@@ -148,6 +149,19 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
                     .fromValues(book, Collections.singleton(theBook))
                     .select(book)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testCTE() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(select(book.id, book.name).from(book))
+                    .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
             System.out.println(fetch);

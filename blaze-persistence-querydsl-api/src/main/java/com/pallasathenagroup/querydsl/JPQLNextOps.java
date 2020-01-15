@@ -27,7 +27,9 @@ public enum JPQLNextOps implements Operator {
     LAG(Object.class),
     FIRST_VALUE(Object.class),
     LAST_VALUE(Object.class),
-    NTH_VALUE(Object.class);
+    NTH_VALUE(Object.class),
+    WITH_ALIAS(Object.class),
+    WITH_COLUMNS(Object.class);
 
     private final Class<?> type;
 

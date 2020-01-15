@@ -4,12 +4,16 @@ import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.NonUniqueResultException;
+import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Path;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
 import com.querydsl.jpa.impl.JPAProvider;
@@ -62,6 +66,16 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
         return this;
     }
 
+    public WithBuilder<BlazeJPAQuery<T>> with(EntityPath<?> alias, Path<?>... columns) {
+        Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
+        Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_COLUMNS, alias, columnsCombined);
+        return new WithBuilder<>(queryMixin, aliasCombined);
+    }
+
+    public WithBuilder<BlazeJPAQuery<T>> withRecursive(EntityPath<?> alias, EntityPath<?>... columns) {
+        queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, JPQLNextTemplates.RECURSIVE));
+        return with(alias, columns);
+    }
 
     @Override
     public Query createQuery() {

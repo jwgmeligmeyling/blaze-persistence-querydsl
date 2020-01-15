@@ -6,6 +6,7 @@ import com.blazebit.persistence.DistinctBuilder;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
 import com.blazebit.persistence.FullQueryBuilder;
+import com.blazebit.persistence.FullSelectCTECriteriaBuilder;
 import com.blazebit.persistence.GroupByBuilder;
 import com.blazebit.persistence.HavingBuilder;
 import com.blazebit.persistence.JoinType;
@@ -19,16 +20,23 @@ import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
 import com.querydsl.core.JoinExpression;
+import com.querydsl.core.QueryFlag;
+import com.querydsl.core.QueryFlag.Position;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
+import com.querydsl.core.types.Constant;
+import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.FactoryExpression;
 import com.querydsl.core.types.Operation;
+import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.SubQueryExpression;
+import com.querydsl.core.types.TemplateExpression;
+import com.querydsl.core.types.Visitor;
 import com.querydsl.jpa.JPAQueryMixin;
 import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
@@ -37,9 +45,12 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.IdentityHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.logging.Logger;
 
 public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
@@ -66,6 +77,17 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         Expression<?> select = metadata.getProjection();
         Class<T> type = (Class<T>) select.getType();
         this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
+
+
+        for (QueryFlag queryFlag : metadata.getFlags()) {
+            Expression<?> flag = queryFlag.getFlag();
+            Position position = queryFlag.getPosition();
+            switch (position) {
+                case WITH:
+                    flag.accept(this, null);
+                    break;
+            }
+        }
 
         renderJoins(metadata, criteriaBuilder);
         renderDistinct(metadata, criteriaBuilder);
@@ -349,6 +371,117 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         }
         this.subQueryToLabel = new IdentityHashMap<>();
         return subQueryToLabel;
+    }
+
+    private EntityPath<?> cteEntityPath;
+    private List<Path<?>> cteAliases;
+
+    @Override
+    protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
+        if (operator instanceof JPQLNextOps) {
+            switch ((JPQLNextOps) operator) {
+                case WITH_ALIAS:
+                    Expression<?> withColumns = args.get(0);
+                    withColumns.accept(this, null);
+                    SubQueryExpression<?> subQuery = (SubQueryExpression) args.get(1);
+                    QueryMetadata subQueryMetadata = subQuery.getMetadata();
+
+                    FullSelectCTECriteriaBuilder<CriteriaBuilder<T>> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
+                    renderJoins(subQueryMetadata, cteBuilder);
+                    renderDistinct(subQueryMetadata, cteBuilder);
+                    renderWhere(subQueryMetadata, cteBuilder);
+                    renderGroupBy(subQueryMetadata, cteBuilder);
+                    renderHaving(subQueryMetadata, cteBuilder);
+                    renderOrderBy(subQueryMetadata, cteBuilder);
+                    renderParameters(subQueryMetadata, cteBuilder);
+                    renderModifiers(subQueryMetadata.getModifiers(), cteBuilder);
+
+                    FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
+
+                    for (int i = 0; i < cteAliases.size(); i++) {
+                        Path<?> alias = cteAliases.get(i);
+                        String aliasString = relativePathString(cteEntityPath, alias);
+                        Expression<?> expression = projection.getArgs().get(i);
+                        String expressionString = renderExpression(expression);
+                        cteBuilder.bind(aliasString).select(expressionString);
+                    }
+
+                    cteBuilder.end();
+                    return;
+                case WITH_COLUMNS:
+                    cteEntityPath = (EntityPath<?>) args.get(0);
+                    cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
+                    return;
+            }
+        }
+
+        super.visitOperation(type, operator, args);
+    }
+
+    private static String relativePathString(Path<?> root, Path<?> path) {
+        StringBuilder pathString = new StringBuilder(path.getMetadata().getName().length());
+        while (path.getMetadata().getParent() != null && ! path.equals(root)) {
+            if (pathString.length() > 0) pathString.insert(0, '.');
+            pathString.insert(0, path.getMetadata().getName());
+            path = path.getMetadata().getParent();
+        }
+        return pathString.toString();
+    }
+
+    private static class CteAttributesVisitor implements Visitor<List<Path<?>>, List<Path<?>>> {
+
+        @Override
+        public List<Path<?>> visit(Constant<?> expr, List<Path<?>> context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Path<?>> visit(FactoryExpression<?> expr, List<Path<?>> context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Path<?>> visit(Operation<?> operation, List<Path<?>> cteAliases) {
+            switch ((Ops) (operation.getOperator())) {
+                case SINGLETON:
+                    operation.getArg(0).accept(this, cteAliases);
+                    break;
+                case LIST:
+                    visit(operation.getArgs(), cteAliases);
+                    break;
+            }
+            return cteAliases;
+        }
+
+        @Override
+        public List<Path<?>> visit(ParamExpression<?> expr, List<Path<?>> context) {
+            throw new UnsupportedOperationException();
+
+        }
+
+        @Override
+        public List<Path<?>> visit(Path<?> expr, List<Path<?>> context) {
+            context.add(expr);
+            return context;
+        }
+
+        @Override
+        public List<Path<?>> visit(SubQueryExpression<?> expr, List<Path<?>> context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Path<?>> visit(TemplateExpression<?> expr, List<Path<?>> context) {
+            throw new UnsupportedOperationException();
+
+        }
+
+        private void visit(List<Expression<?>> exprs, List<Path<?>> context) {
+            for (Expression<?> e : exprs) {
+                e.accept(this, context);
+            }
+        }
+
     }
 
     public CriteriaBuilder<T> getCriteriaBuilder() {

@@ -1,5 +1,7 @@
 package com.pallasathenagroup.querydsl;
 
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Ops;
 import com.querydsl.jpa.DefaultQueryHandler;
 import com.querydsl.jpa.JPQLTemplates;
@@ -8,6 +10,8 @@ import com.querydsl.jpa.QueryHandler;
 public class JPQLNextTemplates extends JPQLTemplates {
 
     public static final JPQLNextTemplates DEFAULT = new JPQLNextTemplates();
+
+    public static final Expression<?> RECURSIVE = ExpressionUtils.template(Object.class, "");
 
     public JPQLNextTemplates() {
         this(DEFAULT_ESCAPE, DefaultQueryHandler.DEFAULT);
