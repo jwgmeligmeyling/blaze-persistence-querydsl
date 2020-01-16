@@ -3,8 +3,11 @@ package com.pallasathenagroup.querydsl;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.JoinType;
+import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
 import com.blazebit.persistence.SelectBuilder;
+import com.blazebit.persistence.SubqueryBuilder;
+import com.blazebit.persistence.SubqueryInitiator;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
@@ -16,33 +19,38 @@ import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.Path;
+import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.jpa.JPAQueryMixin;
 import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class BlazeCriteriaVisitor<T> {
+public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private static final Logger logger = Logger.getLogger(BlazeCriteriaVisitor.class.getName());
 
     private CriteriaBuilder<T> criteriaBuilder;
     private CriteriaBuilderFactory criteriaBuilderFactory;
     private EntityManager entityManager;
-    private JPQLTemplates templates;
     private Map<Object, String> constantToLabel = new IdentityHashMap<>();
+    private Map<QueryMetadata, String> subQueryToLabel = new IdentityHashMap<>();
+    private JPQLTemplates templates;
 
     public BlazeCriteriaVisitor(CriteriaBuilderFactory criteriaBuilderFactory, EntityManager entityManager, JPQLTemplates templates) {
+        super(templates);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
         this.entityManager = entityManager;
         this.templates = templates;
     }
 
+    @Override
     public void serialize(QueryMetadata metadata, boolean forCountRow, @Nullable String projection) {
         QueryModifiers modifiers = metadata.getModifiers();
         Expression<?> select = metadata.getProjection();
@@ -123,7 +131,20 @@ public class BlazeCriteriaVisitor<T> {
         }
 
         if (metadata.getWhere() != null) {
-            criteriaBuilder.setWhereExpression(renderExpression(metadata.getWhere()));
+            String expression = renderExpression(metadata.getWhere());
+            if (subQueryToLabel.isEmpty()) {
+                criteriaBuilder.setWhereExpression(expression);
+            } else {
+                MultipleSubqueryInitiator<CriteriaBuilder<T>> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
+                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
+                    serializeSubQuery(entry.getKey());
+                    popSubqueryInitiator();
+                }
+                subqueryInitiator.end();
+            }
+
+
         }
 
         for (Expression<?> groupByExpression : metadata.getGroupBy()) {
@@ -159,6 +180,140 @@ public class BlazeCriteriaVisitor<T> {
             }
         }
 
+    }
+
+    private void serializeSubQuery(QueryMetadata metadata) {
+        SubqueryInitiator<?> subqueryInitiator = getSubqueryInitiator();
+        SubqueryBuilder<?> criteriaBuilder = null;
+
+        QueryModifiers modifiers = metadata.getModifiers();
+        Expression<?> select = metadata.getProjection();
+
+        for (JoinExpression joinExpression : metadata.getJoins()) {
+            boolean fetch = joinExpression.hasFlag(JPAQueryMixin.FETCH);
+            boolean hasCondition = joinExpression.getCondition() != null;
+            Expression<?> target = joinExpression.getTarget();
+            String alias = null;
+
+            if (target instanceof Operation<?>) {
+                Operation<?> operation = (Operation<?>) target;
+                if (operation.getOperator() == Ops.ALIAS) {
+                    target = operation.getArg(0);
+                    alias = ((Path<?>) operation.getArg(1)).getMetadata().getName();
+                }
+            }
+
+            if (target instanceof ValuesExpression<?>) {
+                ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
+                if ( valuesExpression.isIdentifiable() ) {
+                    criteriaBuilder = subqueryInitiator.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                } else {
+                    criteriaBuilder = subqueryInitiator.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                }
+            }
+            else if (target instanceof Path<?>) {
+                Path<?> entityPath = (Path<?>) target;
+                if (alias == null) {
+                    alias = entityPath.getMetadata().getName();
+                }
+                boolean entityJoin = entityPath.getMetadata().isRoot();
+
+                switch (joinExpression.getType()) {
+                    case DEFAULT:
+                        criteriaBuilder = subqueryInitiator.from(entityPath.getType(), alias);
+                        break;
+                    default:
+                        JoinType joinType = getJoinType(joinExpression);
+
+                        if (hasCondition && fetch) {
+                            logger.warning("Fetch is ignored due to on-clause");
+                        }
+
+                        if (entityJoin) {
+                            if (!hasCondition) {
+                                throw new IllegalStateException("No on-clause for entity join!");
+                            }
+                            criteriaBuilder.joinOn(entityPath.getType(), alias, joinType)
+                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
+                        } else if (!hasCondition) {
+                            criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
+                        } else {
+                            criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType)
+                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
+                        }
+
+                        break;
+                }
+
+            } else {
+                // TODO Handle Treat operations
+                throw new UnsupportedOperationException("Joins for " + target + " is not yet implemented");
+            }
+        }
+
+        if (metadata.isDistinct()) {
+            criteriaBuilder.distinct();
+        }
+
+        if (select instanceof FactoryExpression<?>) {
+            FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
+            for (Expression<?> arg : factoryExpression.getArgs()) {
+                renderSingleSelect(arg, criteriaBuilder);
+            }
+        } else {
+            renderSingleSelect(select, criteriaBuilder);
+        }
+
+        if (metadata.getWhere() != null) {
+            String expression = renderExpression(metadata.getWhere());
+            if (subQueryToLabel.isEmpty()) {
+                criteriaBuilder.setWhereExpression(expression);
+            } else {
+//                MultipleSubqueryInitiator<CriteriaBuilder<T>> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
+//                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+//                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
+//
+//                    popSubqueryInitiator();
+//                }
+            }
+
+
+        }
+
+        for (Expression<?> groupByExpression : metadata.getGroupBy()) {
+            criteriaBuilder.groupBy(renderExpression(groupByExpression));
+        }
+
+        if (metadata.getHaving() != null) {
+            criteriaBuilder.setHavingExpression(renderExpression(metadata.getHaving()));
+        }
+
+        for (OrderSpecifier<?> orderSpecifier : metadata.getOrderBy()) {
+            renderOrderSpecifier(orderSpecifier);
+        }
+
+        for (Map.Entry<ParamExpression<?>, Object> entry : metadata.getParams().entrySet()) {
+            criteriaBuilder.setParameter(entry.getKey().getName(), entry.getValue());
+        }
+
+        for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
+            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+        }
+
+        if (! metadata.getFlags().isEmpty()) {
+            logger.warning("Ignoring flags for query");
+        }
+
+        if (modifiers != null) {
+            if (modifiers.getLimitAsInteger() != null) {
+                criteriaBuilder.setMaxResults(modifiers.getLimitAsInteger());
+            }
+            if (modifiers.getOffsetAsInteger() != null) {
+                criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
+            }
+        }
+
+        criteriaBuilder.end();
     }
 
     private JoinType getJoinType(JoinExpression joinExpression) {
@@ -209,20 +364,51 @@ public class BlazeCriteriaVisitor<T> {
         selectBuilder.select(s, alias);
     }
 
+    private int length = 0;
+
+    private String takeBuffer() {
+        if (getLength() == length) {
+            return "";
+        }
+        String result = toString().substring(length);
+        length = getLength();
+        return result;
+    }
+
     private String renderExpression(Expression<?> select) {
-        JPQLSerializer jpqlSerializer = new JPQLSerializer(templates) {
-            @Override
-            public void visitConstant(Object constant) {
-                // TODO Handle in case operations
-                boolean wrap = templates.wrapConstant(constant);
-                if (wrap) append("(");
-                append(":");
-                append(constantToLabel.computeIfAbsent(constant, o -> "param_" + (constantToLabel.size() + 1)));
-                if (wrap) append(")");
-            }
-        };
-        select.accept(jpqlSerializer, null);
-        return jpqlSerializer.toString();
+        takeBuffer();
+        select.accept(this, null);
+        return takeBuffer();
+    }
+
+    @Override
+    public void visitConstant(Object constant) {
+        // TODO Handle in case operations
+        boolean wrap = templates.wrapConstant(constant);
+        if (wrap) append("(");
+        append(":");
+        append(constantToLabel.computeIfAbsent(constant, o -> "param_" + (constantToLabel.size() + 1)));
+        if (wrap) append(")");
+    }
+
+    @Override
+    public Void visit(SubQueryExpression<?> query, Void context) {
+        append(subQueryToLabel.computeIfAbsent(query.getMetadata(), o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
+        return null;
+    }
+
+    private final List<SubqueryInitiator<?>> subqueryInitiatorStack = new ArrayList<SubqueryInitiator<?>>();;
+
+    public SubqueryInitiator<?> getSubqueryInitiator() {
+        return subqueryInitiatorStack.get(subqueryInitiatorStack.size() - 1);
+    }
+
+    public void pushSubqueryInitiator(SubqueryInitiator<?> subqueryInitiator) {
+        subqueryInitiatorStack.add(subqueryInitiator);
+    }
+
+    public void popSubqueryInitiator() {
+        subqueryInitiatorStack.remove(subqueryInitiatorStack.size() - 1);
     }
 
     public CriteriaBuilder<T> getCriteriaBuilder() {

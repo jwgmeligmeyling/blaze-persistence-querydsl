@@ -7,6 +7,7 @@ import com.blazebit.persistence.spi.CriteriaBuilderConfiguration;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
@@ -21,6 +22,7 @@ import java.util.Map;
 import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
+import static com.querydsl.jpa.JPAExpressions.select;
 import static org.hibernate.testing.transaction.TransactionUtil.doInJPA;
 
 public class BasicQueryTest extends BaseCoreFunctionalTestCase {
@@ -74,6 +76,19 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
+    public void testSubQuery() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            QTestEntity sub = new QTestEntity("sub");
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+                    .select(testEntity.field.as("blep"), testEntity.field.substring(2))
+                    .where(testEntity.id.in(select(sub.id).from(sub)));
+
+            List<Tuple> fetch = query.fetch();
+            Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
     public void testTransformBlazeJPAQuery() {
         doInJPA(this::sessionFactory, entityManager -> {
             Map<Long, String> blep = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
@@ -108,19 +123,6 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
 
-
-
-    @Test
-    public void testWithBlazePersist() {
-        doInJPA(this::sessionFactory, entityManager -> {
-            List<String> fetch = criteriaBuilderFactory.create(entityManager, String.class)
-                    .from(TestEntity.class)
-                    .select("field")
-                    .where("length(field)").gt(1)
-                    .getResultList();
-            Assert.assertFalse(fetch.isEmpty());
-        });
-    }
 
     @Test
     public void testFromValues() {
