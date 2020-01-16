@@ -89,6 +89,20 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
+    public void testNestedSubQuery() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            QTestEntity sub = new QTestEntity("sub");
+            QTestEntity sub2 = new QTestEntity("sub2");
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+                    .select(testEntity.field.as("blep"), testEntity.field.substring(2))
+                    .where(testEntity.id.in(select(sub.id).from(sub).where(sub.id.in(select(sub2.id).from(sub2).where(sub2.id.eq(sub.id)))).limit(5)));
+
+            List<Tuple> fetch = query.fetch();
+            Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
     public void testTransformBlazeJPAQuery() {
         doInJPA(this::sessionFactory, entityManager -> {
             Map<Long, String> blep = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)

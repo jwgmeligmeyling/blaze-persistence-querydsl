@@ -83,7 +83,7 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
             }
         }
 
-        System.out.println(criteriaBuilder.getQueryString());
+        System.out.println("Query: " + criteriaBuilder.getQueryString());
 
         if (forCount) {
             return criteriaBuilder.getCountQuery();

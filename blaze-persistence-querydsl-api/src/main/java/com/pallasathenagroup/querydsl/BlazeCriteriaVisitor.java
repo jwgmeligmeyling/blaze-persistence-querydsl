@@ -27,6 +27,7 @@ import com.querydsl.jpa.JPQLTemplates;
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
         if (metadata.getWhere() != null) {
             String expression = renderExpression(metadata.getWhere());
+            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
             if (subQueryToLabel.isEmpty()) {
                 criteriaBuilder.setWhereExpression(expression);
             } else {
@@ -266,18 +268,18 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
         if (metadata.getWhere() != null) {
             String expression = renderExpression(metadata.getWhere());
+            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
             if (subQueryToLabel.isEmpty()) {
                 criteriaBuilder.setWhereExpression(expression);
             } else {
-//                MultipleSubqueryInitiator<CriteriaBuilder<T>> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
-//                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-//                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
-//
-//                    popSubqueryInitiator();
-//                }
+                MultipleSubqueryInitiator<?> subqueryInitiator2 = criteriaBuilder.setWhereExpressionSubqueries(expression);
+                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+                    pushSubqueryInitiator(subqueryInitiator2.with(entry.getValue()));
+                    serializeSubQuery(entry.getKey());
+                    popSubqueryInitiator();
+                }
+                subqueryInitiator2.end();
             }
-
-
         }
 
         for (Expression<?> groupByExpression : metadata.getGroupBy()) {
@@ -399,16 +401,25 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private final List<SubqueryInitiator<?>> subqueryInitiatorStack = new ArrayList<SubqueryInitiator<?>>();;
 
-    public SubqueryInitiator<?> getSubqueryInitiator() {
+    private SubqueryInitiator<?> getSubqueryInitiator() {
         return subqueryInitiatorStack.get(subqueryInitiatorStack.size() - 1);
     }
 
-    public void pushSubqueryInitiator(SubqueryInitiator<?> subqueryInitiator) {
+    private void pushSubqueryInitiator(SubqueryInitiator<?> subqueryInitiator) {
         subqueryInitiatorStack.add(subqueryInitiator);
     }
 
-    public void popSubqueryInitiator() {
+    private void popSubqueryInitiator() {
         subqueryInitiatorStack.remove(subqueryInitiatorStack.size() - 1);
+    }
+
+    private Map<QueryMetadata, String> takeSubQueryToLabelMap() {
+        Map<QueryMetadata, String> subQueryToLabel = this.subQueryToLabel;
+        if (subQueryToLabel.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        this.subQueryToLabel = new IdentityHashMap<>();
+        return subQueryToLabel;
     }
 
     public CriteriaBuilder<T> getCriteriaBuilder() {
