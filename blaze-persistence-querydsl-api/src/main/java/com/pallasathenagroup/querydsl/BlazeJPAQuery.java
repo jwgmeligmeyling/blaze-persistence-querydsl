@@ -28,17 +28,17 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
 
     public BlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(null, JPQLTemplates.DEFAULT, new DefaultQueryMetadata());
+        super(null, JPQLNextTemplates.DEFAULT, new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
     public BlazeJPAQuery(EntityManager em, CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(em, JPAProvider.getTemplates(em), new DefaultQueryMetadata());
+        super(em, JPQLNextTemplates.DEFAULT, new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
     public BlazeJPAQuery(EntityManager em, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
-        super(em, JPAProvider.getTemplates(em), metadata);
+        super(em, JPQLNextTemplates.DEFAULT, metadata);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
