@@ -2,16 +2,25 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.blazebit.persistence.DistinctBuilder;
+import com.blazebit.persistence.FromBaseBuilder;
+import com.blazebit.persistence.FromBuilder;
+import com.blazebit.persistence.FullQueryBuilder;
+import com.blazebit.persistence.GroupByBuilder;
+import com.blazebit.persistence.HavingBuilder;
 import com.blazebit.persistence.JoinType;
+import com.blazebit.persistence.LimitBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
+import com.blazebit.persistence.OrderByBuilder;
+import com.blazebit.persistence.ParameterHolder;
 import com.blazebit.persistence.SelectBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
+import com.blazebit.persistence.WhereBuilder;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
-import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.FactoryExpression;
 import com.querydsl.core.types.Operation;
@@ -58,71 +67,15 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         Class<T> type = (Class<T>) select.getType();
         this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
 
-        for (JoinExpression joinExpression : metadata.getJoins()) {
-            boolean fetch = joinExpression.hasFlag(JPAQueryMixin.FETCH);
-            boolean hasCondition = joinExpression.getCondition() != null;
-            Expression<?> target = joinExpression.getTarget();
-            String alias = null;
-
-            if (target instanceof Operation<?>) {
-                Operation<?> operation = (Operation<?>) target;
-                if (operation.getOperator() == Ops.ALIAS) {
-                    target = operation.getArg(0);
-                    alias = ((Path<?>) operation.getArg(1)).getMetadata().getName();
-                }
-            }
-
-            if (target instanceof ValuesExpression<?>) {
-                ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
-                if ( valuesExpression.isIdentifiable() ) {
-                    criteriaBuilder.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
-                } else {
-                    criteriaBuilder.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
-                }
-            }
-            else if (target instanceof Path<?>) {
-                Path<?> entityPath = (Path<?>) target;
-                if (alias == null) {
-                    alias = entityPath.getMetadata().getName();
-                }
-                boolean entityJoin = entityPath.getMetadata().isRoot();
-
-                switch (joinExpression.getType()) {
-                    case DEFAULT:
-                        criteriaBuilder.from(entityPath.getType(), alias);
-                        break;
-                    default:
-                        JoinType joinType = getJoinType(joinExpression);
-
-                        if (hasCondition && fetch) {
-                            logger.warning("Fetch is ignored due to on-clause");
-                        }
-
-                        if (entityJoin) {
-                            if (!hasCondition) {
-                                throw new IllegalStateException("No on-clause for entity join!");
-                            }
-                            criteriaBuilder.joinOn(entityPath.getType(), alias, joinType)
-                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
-                        } else if (!hasCondition) {
-                            criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType, fetch);
-                        } else {
-                            criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType)
-                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
-                        }
-
-                        break;
-                }
-
-            } else {
-                // TODO Handle Treat operations
-                throw new UnsupportedOperationException("Joins for " + target + " is not yet implemented");
-            }
-        }
-
-        if (metadata.isDistinct()) {
-            criteriaBuilder.distinct();
-        }
+        renderJoins(metadata, criteriaBuilder);
+        renderDistinct(metadata, criteriaBuilder);
+        renderWhere(metadata, criteriaBuilder);
+        renderGroupBy(metadata, criteriaBuilder);
+        renderHaving(metadata, criteriaBuilder);
+        renderOrderBy(metadata, criteriaBuilder);
+        renderParameters(metadata, criteriaBuilder);
+        renderConstants(criteriaBuilder);
+        renderModifiers(modifiers, criteriaBuilder);
 
         if (select instanceof FactoryExpression<?>) {
             FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
@@ -131,48 +84,9 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             renderSingleSelect(select, criteriaBuilder);
         }
 
-        if (metadata.getWhere() != null) {
-            String expression = renderExpression(metadata.getWhere());
-            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
-            if (subQueryToLabel.isEmpty()) {
-                criteriaBuilder.setWhereExpression(expression);
-            } else {
-                MultipleSubqueryInitiator<CriteriaBuilder<T>> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
-                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
-                    serializeSubQuery(entry.getKey());
-                    popSubqueryInitiator();
-                }
-                subqueryInitiator.end();
-            }
+    }
 
-
-        }
-
-        for (Expression<?> groupByExpression : metadata.getGroupBy()) {
-            criteriaBuilder.groupBy(renderExpression(groupByExpression));
-        }
-
-        if (metadata.getHaving() != null) {
-            criteriaBuilder.setHavingExpression(renderExpression(metadata.getHaving()));
-        }
-
-        for (OrderSpecifier<?> orderSpecifier : metadata.getOrderBy()) {
-            renderOrderSpecifier(orderSpecifier);
-        }
-
-        for (Map.Entry<ParamExpression<?>, Object> entry : metadata.getParams().entrySet()) {
-            criteriaBuilder.setParameter(entry.getKey().getName(), entry.getValue());
-        }
-
-        for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
-            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
-        }
-
-        if (! metadata.getFlags().isEmpty()) {
-            logger.warning("Ignoring flags for query");
-        }
-
+    private void renderModifiers(QueryModifiers modifiers, LimitBuilder<?> criteriaBuilder) {
         if (modifiers != null) {
             if (modifiers.getLimitAsInteger() != null) {
                 criteriaBuilder.setMaxResults(modifiers.getLimitAsInteger());
@@ -181,16 +95,63 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
             }
         }
-
     }
 
-    private void serializeSubQuery(QueryMetadata metadata) {
-        SubqueryInitiator<?> subqueryInitiator = getSubqueryInitiator();
-        SubqueryBuilder<?> criteriaBuilder = null;
+    private void renderConstants(ParameterHolder<?> criteriaBuilder) {
+        for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
+            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+        }
+    }
 
-        QueryModifiers modifiers = metadata.getModifiers();
-        Expression<?> select = metadata.getProjection();
+    private void renderParameters(QueryMetadata metadata, ParameterHolder<?> criteriaBuilder) {
+        for (Map.Entry<ParamExpression<?>, Object> entry : metadata.getParams().entrySet()) {
+            criteriaBuilder.setParameter(entry.getKey().getName(), entry.getValue());
+        }
+    }
 
+    private void renderOrderBy(QueryMetadata metadata, OrderByBuilder<?> criteriaBuilder) {
+        for (OrderSpecifier<?> orderSpecifier : metadata.getOrderBy()) {
+            renderOrderSpecifier(orderSpecifier, criteriaBuilder);
+        }
+    }
+
+    private void renderHaving(QueryMetadata metadata, HavingBuilder<?> criteriaBuilder) {
+        if (metadata.getHaving() != null) {
+            criteriaBuilder.setHavingExpression(renderExpression(metadata.getHaving()));
+        }
+    }
+
+    private void renderGroupBy(QueryMetadata metadata, GroupByBuilder<?> criteriaBuilder) {
+        for (Expression<?> groupByExpression : metadata.getGroupBy()) {
+            criteriaBuilder.groupBy(renderExpression(groupByExpression));
+        }
+    }
+
+    private void renderWhere(QueryMetadata metadata, WhereBuilder<?> criteriaBuilder) {
+        if (metadata.getWhere() != null) {
+            String expression = renderExpression(metadata.getWhere());
+            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
+            if (subQueryToLabel.isEmpty()) {
+                criteriaBuilder.setWhereExpression(expression);
+            } else {
+                MultipleSubqueryInitiator<?> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
+                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
+                    serializeSubQuery(entry.getKey());
+                    popSubqueryInitiator();
+                }
+                subqueryInitiator.end();
+            }
+        }
+    }
+
+    private void renderDistinct(QueryMetadata metadata, DistinctBuilder<?> criteriaBuilder) {
+        if (metadata.isDistinct()) {
+            criteriaBuilder.distinct();
+        }
+    }
+    private <X extends FromBuilder<X>> X renderJoins(QueryMetadata metadata, FromBaseBuilder<X> subqueryInitiator) {
+        X criteriaBuilder = null;
         for (JoinExpression joinExpression : metadata.getJoins()) {
             boolean fetch = joinExpression.hasFlag(JPAQueryMixin.FETCH);
             boolean hasCondition = joinExpression.getCondition() != null;
@@ -208,9 +169,9 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             if (target instanceof ValuesExpression<?>) {
                 ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
                 if ( valuesExpression.isIdentifiable() ) {
-                    criteriaBuilder = subqueryInitiator.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) subqueryInitiator.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
                 } else {
-                    criteriaBuilder = subqueryInitiator.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) subqueryInitiator.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
                 }
             }
             else if (target instanceof Path<?>) {
@@ -238,7 +199,11 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                             criteriaBuilder.joinOn(entityPath.getType(), alias, joinType)
                                     .setOnExpression(renderExpression(joinExpression.getCondition()));
                         } else if (!hasCondition) {
-                            criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
+                            if (fetch) {
+                                ((FullQueryBuilder) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
+                            } else {
+                                criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
+                            }
                         } else {
                             criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType)
                                     .setOnExpression(renderExpression(joinExpression.getCondition()));
@@ -253,9 +218,23 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             }
         }
 
-        if (metadata.isDistinct()) {
-            criteriaBuilder.distinct();
-        }
+        return criteriaBuilder;
+    }
+
+    private void serializeSubQuery(QueryMetadata metadata) {
+        SubqueryInitiator<?> subqueryInitiator = getSubqueryInitiator();
+        QueryModifiers modifiers = metadata.getModifiers();
+        Expression<?> select = metadata.getProjection();
+
+        SubqueryBuilder criteriaBuilder = renderJoins(metadata, subqueryInitiator);
+        renderDistinct(metadata, criteriaBuilder);
+        renderWhere(metadata, criteriaBuilder);
+        renderGroupBy(metadata, criteriaBuilder);
+        renderHaving(metadata, criteriaBuilder);
+        renderOrderBy(metadata, criteriaBuilder);
+        renderParameters(metadata, criteriaBuilder);
+        renderConstants(criteriaBuilder);
+        renderModifiers(modifiers, criteriaBuilder);
 
         if (select instanceof FactoryExpression<?>) {
             FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
@@ -266,62 +245,11 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             renderSingleSelect(select, criteriaBuilder);
         }
 
-        if (metadata.getWhere() != null) {
-            String expression = renderExpression(metadata.getWhere());
-            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
-            if (subQueryToLabel.isEmpty()) {
-                criteriaBuilder.setWhereExpression(expression);
-            } else {
-                MultipleSubqueryInitiator<?> subqueryInitiator2 = criteriaBuilder.setWhereExpressionSubqueries(expression);
-                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-                    pushSubqueryInitiator(subqueryInitiator2.with(entry.getValue()));
-                    serializeSubQuery(entry.getKey());
-                    popSubqueryInitiator();
-                }
-                subqueryInitiator2.end();
-            }
-        }
-
-        for (Expression<?> groupByExpression : metadata.getGroupBy()) {
-            criteriaBuilder.groupBy(renderExpression(groupByExpression));
-        }
-
-        if (metadata.getHaving() != null) {
-            criteriaBuilder.setHavingExpression(renderExpression(metadata.getHaving()));
-        }
-
-        for (OrderSpecifier<?> orderSpecifier : metadata.getOrderBy()) {
-            renderOrderSpecifier(orderSpecifier);
-        }
-
-        for (Map.Entry<ParamExpression<?>, Object> entry : metadata.getParams().entrySet()) {
-            criteriaBuilder.setParameter(entry.getKey().getName(), entry.getValue());
-        }
-
-        for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
-            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
-        }
-
-        if (! metadata.getFlags().isEmpty()) {
-            logger.warning("Ignoring flags for query");
-        }
-
-        if (modifiers != null) {
-            if (modifiers.getLimitAsInteger() != null) {
-                criteriaBuilder.setMaxResults(modifiers.getLimitAsInteger());
-            }
-            if (modifiers.getOffsetAsInteger() != null) {
-                criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
-            }
-        }
-
         criteriaBuilder.end();
     }
 
     private JoinType getJoinType(JoinExpression joinExpression) {
         switch (joinExpression.getType()) {
-            case DEFAULT:
-                throw new IllegalArgumentException("DEFAULT Join has no equivalent JoinType");
             case INNERJOIN:
             case JOIN:
                 return JoinType.INNER;
@@ -331,11 +259,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 return JoinType.RIGHT;
             case FULLJOIN:
                 return JoinType.FULL;
+            default:
+                throw new IllegalArgumentException("Join has no equivalent JoinType");
         }
-        throw new IllegalStateException();
     }
 
-    private void renderOrderSpecifier(OrderSpecifier<?> orderSpecifier) {
+    private void renderOrderSpecifier(OrderSpecifier<?> orderSpecifier, OrderByBuilder<?> criteriaBuilder) {
         String orderExpression = renderExpression(orderSpecifier.getTarget());
         boolean ascending = orderSpecifier.isAscending();
         switch (orderSpecifier.getNullHandling()) {
