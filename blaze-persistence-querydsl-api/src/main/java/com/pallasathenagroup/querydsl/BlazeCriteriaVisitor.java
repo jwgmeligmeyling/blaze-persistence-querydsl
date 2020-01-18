@@ -1,8 +1,12 @@
 package com.pallasathenagroup.querydsl;
 
+import com.blazebit.persistence.BaseOngoingFinalSetOperationBuilder;
+import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.DistinctBuilder;
+import com.blazebit.persistence.FinalSetOperationCTECriteriaBuilder;
+import com.blazebit.persistence.FinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
 import com.blazebit.persistence.FullQueryBuilder;
@@ -10,12 +14,24 @@ import com.blazebit.persistence.FullSelectCTECriteriaBuilder;
 import com.blazebit.persistence.GroupByBuilder;
 import com.blazebit.persistence.HavingBuilder;
 import com.blazebit.persistence.JoinType;
+import com.blazebit.persistence.LeafOngoingFinalSetOperationCTECriteriaBuilder;
+import com.blazebit.persistence.LeafOngoingSetOperationCTECriteriaBuilder;
+import com.blazebit.persistence.LeafOngoingSetOperationCriteriaBuilder;
 import com.blazebit.persistence.LimitBuilder;
+import com.blazebit.persistence.MiddleOngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
+import com.blazebit.persistence.OngoingSetOperationBuilder;
+import com.blazebit.persistence.OngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
+import com.blazebit.persistence.SelectBaseCTECriteriaBuilder;
 import com.blazebit.persistence.SelectBuilder;
+import com.blazebit.persistence.SelectCTECriteriaBuilder;
+import com.blazebit.persistence.SelectRecursiveCTECriteriaBuilder;
+import com.blazebit.persistence.SetOperationBuilder;
+import com.blazebit.persistence.StartOngoingSetOperationBuilder;
+import com.blazebit.persistence.StartOngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
@@ -52,6 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.logging.Logger;
+
+import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 
 public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
@@ -172,6 +190,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             criteriaBuilder.distinct();
         }
     }
+
     private <X extends FromBuilder<X>> X renderJoins(QueryMetadata metadata, FromBaseBuilder<X> subqueryInitiator) {
         X criteriaBuilder = null;
         for (JoinExpression joinExpression : metadata.getJoins()) {
@@ -375,6 +394,69 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private EntityPath<?> cteEntityPath;
     private List<Path<?>> cteAliases;
+    private boolean recursive;
+
+    private <X extends SelectBaseCTECriteriaBuilder<?> & SetOperationBuilder<?, ?>>
+    Object renderWithQuery(X criteriaBuilder, Expression<?> expression) {
+        if (expression instanceof Operation<?>) {
+            Operation<?> setOperation = (Operation<?>) expression;
+            renderWithQuery(criteriaBuilder, setOperation.getArg(0));
+            Object setBuilder = null;
+            switch ((JPQLNextOps) setOperation.getOperator()) {
+                case SET_UNION:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startUnion() : criteriaBuilder.union();
+                    break;
+                case SET_UNION_ALL:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startUnionAll() : criteriaBuilder.unionAll();
+                    break;
+                case SET_EXCEPT:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startExcept() : criteriaBuilder.except();
+                    break;
+                case SET_EXCEPT_ALL:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startExceptAll() : criteriaBuilder.exceptAll();
+                    break;
+                case SET_INTERSECT:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startIntersect() : criteriaBuilder.intersect();
+                    break;
+                case SET_INTERSECT_ALL:
+                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
+                            criteriaBuilder.startIntersectAll() : criteriaBuilder.intersectAll();
+                    break;
+            }
+            setBuilder = renderWithQuery((X) setBuilder, setOperation.getArg(1));
+            return ((BaseOngoingSetOperationBuilder) setBuilder).endSet();
+        }
+        else {
+
+            SubQueryExpression<?> subQuery = (SubQueryExpression) expression;
+            QueryMetadata subQueryMetadata = subQuery.getMetadata();
+
+            renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
+            renderDistinct(subQueryMetadata, criteriaBuilder);
+            renderWhere(subQueryMetadata, criteriaBuilder);
+            renderGroupBy(subQueryMetadata, criteriaBuilder);
+            renderHaving(subQueryMetadata, criteriaBuilder);
+            renderOrderBy(subQueryMetadata, criteriaBuilder);
+            renderParameters(subQueryMetadata, criteriaBuilder);
+            renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
+
+            FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
+
+            for (int i = 0; i < cteAliases.size(); i++) {
+                Path<?> alias = cteAliases.get(i);
+                String aliasString = relativePathString(cteEntityPath, alias);
+                Expression<?> projExpression = projection.getArgs().get(i);
+                String expressionString = renderExpression(projExpression);
+                criteriaBuilder.bind(aliasString).select(expressionString);
+            }
+        }
+        return criteriaBuilder;
+    }
 
     @Override
     protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
@@ -383,31 +465,109 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 case WITH_ALIAS:
                     Expression<?> withColumns = args.get(0);
                     withColumns.accept(this, null);
-                    SubQueryExpression<?> subQuery = (SubQueryExpression) args.get(1);
-                    QueryMetadata subQueryMetadata = subQuery.getMetadata();
 
-                    FullSelectCTECriteriaBuilder<CriteriaBuilder<T>> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
-                    renderJoins(subQueryMetadata, cteBuilder);
-                    renderDistinct(subQueryMetadata, cteBuilder);
-                    renderWhere(subQueryMetadata, cteBuilder);
-                    renderGroupBy(subQueryMetadata, cteBuilder);
-                    renderHaving(subQueryMetadata, cteBuilder);
-                    renderOrderBy(subQueryMetadata, cteBuilder);
-                    renderParameters(subQueryMetadata, cteBuilder);
-                    renderModifiers(subQueryMetadata.getModifiers(), cteBuilder);
 
-                    FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
+                    if (recursive) {
+                        Operation<?> unionOperation = (Operation<?>) args.get(1);
+                        SubQueryExpression<?> subQuery = (SubQueryExpression) unionOperation.getArg(0);
+                        QueryMetadata subQueryMetadata = subQuery.getMetadata();
+                        FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
 
-                    for (int i = 0; i < cteAliases.size(); i++) {
-                        Path<?> alias = cteAliases.get(i);
-                        String aliasString = relativePathString(cteEntityPath, alias);
-                        Expression<?> expression = projection.getArgs().get(i);
-                        String expressionString = renderExpression(expression);
-                        cteBuilder.bind(aliasString).select(expressionString);
+                        SelectRecursiveCTECriteriaBuilder<CriteriaBuilder<T>> baseCriteriaBuilder = criteriaBuilder.withRecursive(cteEntityPath.getType());
+                        SelectCTECriteriaBuilder<CriteriaBuilder<T>> recursiveCriteriaBuilder = null;
+
+                        renderJoins(subQueryMetadata, (FromBaseBuilder) baseCriteriaBuilder);
+                        renderDistinct(subQueryMetadata, baseCriteriaBuilder);
+                        renderWhere(subQueryMetadata, baseCriteriaBuilder);
+                        renderGroupBy(subQueryMetadata, baseCriteriaBuilder);
+                        renderHaving(subQueryMetadata, baseCriteriaBuilder);
+                        renderOrderBy(subQueryMetadata, baseCriteriaBuilder);
+                        renderParameters(subQueryMetadata, baseCriteriaBuilder);
+                        renderModifiers(subQueryMetadata.getModifiers(), baseCriteriaBuilder);
+
+
+                        for (int i = 0; i < cteAliases.size(); i++) {
+                            Path<?> alias = cteAliases.get(i);
+                            String aliasString = relativePathString(cteEntityPath, alias);
+                            Expression<?> projExpression = projection.getArgs().get(i);
+                            String expressionString = renderExpression(projExpression);
+                            baseCriteriaBuilder.bind(aliasString).select(expressionString);
+                        }
+
+
+                        switch ((JPQLNextOps) unionOperation.getOperator()) {
+                            case SET_UNION:
+                                recursiveCriteriaBuilder = baseCriteriaBuilder.union();
+                                break;
+                            case SET_UNION_ALL:
+                                recursiveCriteriaBuilder = baseCriteriaBuilder.unionAll();
+                                break;
+                        }
+
+                        subQuery = (SubQueryExpression) unionOperation.getArg(1);
+                        subQueryMetadata = subQuery.getMetadata();
+                        projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
+
+                        renderJoins(subQueryMetadata, (FromBaseBuilder) recursiveCriteriaBuilder);
+                        renderDistinct(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderWhere(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderGroupBy(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderHaving(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderOrderBy(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderParameters(subQueryMetadata, recursiveCriteriaBuilder);
+                        renderModifiers(subQueryMetadata.getModifiers(), recursiveCriteriaBuilder);
+
+                        for (int i = 0; i < cteAliases.size(); i++) {
+                            Path<?> alias = cteAliases.get(i);
+                            String aliasString = relativePathString(cteEntityPath, alias);
+                            Expression<?> projExpression = projection.getArgs().get(i);
+                            String expressionString = renderExpression(projExpression);
+                            recursiveCriteriaBuilder.bind(aliasString).select(expressionString);
+                        }
+
+                        recursiveCriteriaBuilder.end();
+                        return;
                     }
 
-                    cteBuilder.end();
+
+                    FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
+
+                    Expression<?> subQueryExpression = args.get(1);
+                    Object result = renderWithQuery(cteBuilder, subQueryExpression);
+
+                    if (result instanceof FinalSetOperationCTECriteriaBuilder) {
+                        result = ((FinalSetOperationCTECriteriaBuilder) result).end();
+                    }
+                    else if (result instanceof FullSelectCTECriteriaBuilder) {
+                        result = ((FullSelectCTECriteriaBuilder) result).end();
+                    }
+
+//                    SubQueryExpression<?> subQuery = (SubQueryExpression) args.get(1);
+//                    QueryMetadata subQueryMetadata = subQuery.getMetadata();
+//
+//                    renderJoins(subQueryMetadata, cteBuilder);
+//                    renderDistinct(subQueryMetadata, cteBuilder);
+//                    renderWhere(subQueryMetadata, cteBuilder);
+//                    renderGroupBy(subQueryMetadata, cteBuilder);
+//                    renderHaving(subQueryMetadata, cteBuilder);
+//                    renderOrderBy(subQueryMetadata, cteBuilder);
+//                    renderParameters(subQueryMetadata, cteBuilder);
+//                    renderModifiers(subQueryMetadata.getModifiers(), cteBuilder);
+//
+//                    FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
+//
+//                    for (int i = 0; i < cteAliases.size(); i++) {
+//                        Path<?> alias = cteAliases.get(i);
+//                        String aliasString = relativePathString(cteEntityPath, alias);
+//                        Expression<?> expression = projection.getArgs().get(i);
+//                        String expressionString = renderExpression(expression);
+//                        cteBuilder.bind(aliasString).select(expressionString);
+//                    }
+//
+//                    cteBuilder.end();
                     return;
+                case WITH_RECURSIVE_COLUMNS:
+                    recursive = true;
                 case WITH_COLUMNS:
                     cteEntityPath = (EntityPath<?>) args.get(0);
                     cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());

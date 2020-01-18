@@ -72,9 +72,10 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
         return new WithBuilder<>(queryMixin, aliasCombined);
     }
 
-    public WithBuilder<BlazeJPAQuery<T>> withRecursive(EntityPath<?> alias, EntityPath<?>... columns) {
-        queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, JPQLNextTemplates.RECURSIVE));
-        return with(alias, columns);
+    public WithBuilder<BlazeJPAQuery<T>> withRecursive(EntityPath<?> alias, Path<?>... columns) {
+        Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
+        Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
+        return new WithBuilder<>(queryMixin, aliasCombined);
     }
 
     @Override

@@ -22,7 +22,7 @@ public class WithBuilder<R> {
         this.alias = alias;
     }
 
-    public R as(JPQLQuery<?> expr) {
+    public R as(Expression<?> expr) {
         Expression<?> flag = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, expr);
         return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, flag));
     }

@@ -23,6 +23,8 @@ import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
+import static com.pallasathenagroup.querydsl.UnionUtils.intersect;
+import static com.pallasathenagroup.querydsl.UnionUtils.union;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static org.hibernate.testing.transaction.TransactionUtil.doInJPA;
 
@@ -167,4 +169,32 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             System.out.println(fetch);
         });
     }
+
+    @Test
+    public void testCTEUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book), intersect(select(book.id, book.name).from(book), select(book.id, book.name).from(book))))
+                    .select(idHolderCte.id).from(idHolderCte)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testRecursiveCTEUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book).where(book.id.eq(1L)), select(book.id, book.name).from(book)
+                            .where(book.id.notIn(select(idHolderCte.id).from(idHolderCte)))))
+                    .select(idHolderCte.id).from(idHolderCte)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
 }
