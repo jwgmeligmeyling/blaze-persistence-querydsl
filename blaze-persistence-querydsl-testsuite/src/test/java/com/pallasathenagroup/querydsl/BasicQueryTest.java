@@ -25,6 +25,8 @@ import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
 import static com.pallasathenagroup.querydsl.UnionUtils.intersect;
 import static com.pallasathenagroup.querydsl.UnionUtils.union;
+import static com.pallasathenagroup.querydsl.WindowExpressions.lastValue;
+import static com.pallasathenagroup.querydsl.WindowExpressions.rowNumber;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static org.hibernate.testing.transaction.TransactionUtil.doInJPA;
 
@@ -65,7 +67,6 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
 
-
     @Test
     public void testThroughBlazeJPAQuery() {
         doInJPA(this::sessionFactory, entityManager -> {
@@ -84,6 +85,19 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             QTestEntity sub = new QTestEntity("sub");
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
+                    .where(testEntity.id.in(select(sub.id).from(sub)));
+
+            List<Tuple> fetch = query.fetch();
+            Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
+    public void testWindowFunction() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            QTestEntity sub = new QTestEntity("sub");
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+                    .select(testEntity.field.as("blep"), rowNumber(), lastValue(testEntity.field).over().partitionBy(testEntity.id))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();

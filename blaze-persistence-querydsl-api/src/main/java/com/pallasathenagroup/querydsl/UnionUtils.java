@@ -3,9 +3,8 @@ package com.pallasathenagroup.querydsl;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Operator;
-import com.querydsl.core.types.SubQueryExpression;
 
-public class UnionUtils {
+public final class UnionUtils {
 
     @SafeVarargs
     public static <T> Expression<T> union(Expression<T>... expressions) {

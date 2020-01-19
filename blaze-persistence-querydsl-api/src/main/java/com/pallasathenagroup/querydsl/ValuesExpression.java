@@ -1,6 +1,5 @@
 package com.pallasathenagroup.querydsl;
 
-import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.PathMetadata;
 import com.querydsl.core.types.Visitor;

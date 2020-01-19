@@ -11,8 +11,6 @@ public class JPQLNextTemplates extends JPQLTemplates {
 
     public static final JPQLNextTemplates DEFAULT = new JPQLNextTemplates();
 
-    public static final Expression<?> RECURSIVE = ExpressionUtils.template(Object.class, "");
-
     public JPQLNextTemplates() {
         this(DEFAULT_ESCAPE, DefaultQueryHandler.DEFAULT);
     }
@@ -61,5 +59,19 @@ public class JPQLNextTemplates extends JPQLTemplates {
 
         add(Ops.AggOps.BOOLEAN_ALL, "AND_AGG({0})");
         add(Ops.AggOps.BOOLEAN_ANY, "OR_AGG({0})");
+
+        add(JPQLNextOps.CUME_DIST, "cume_dist()");
+        add(JPQLNextOps.DENSE_RANK, "dense_rank()");
+        add(JPQLNextOps.FIRST_VALUE, "first_value({0})");
+        add(JPQLNextOps.LAG, "lag({0})");
+        add(JPQLNextOps.LAST_VALUE, "last_value({0})");
+        add(JPQLNextOps.LEAD, "lead({0})");
+        add(JPQLNextOps.NTH_VALUE, "nth_value({0}, {1})");
+        add(JPQLNextOps.NTILE, "ntile({0})");
+        add(JPQLNextOps.PERCENT_RANK, "PERCENT_RANK({0})");
+        add(JPQLNextOps.RANK, "rank()");
+        add(JPQLNextOps.GROUP_CONCAT, "GROUP_CONCAT({0})");
+        add(JPQLNextOps.WINDOW_GROUP_CONCAT, "WINDOW_GROUP_CONCAT({0})");
+        add(JPQLNextOps.ROW_NUMBER, "row_number()");
     }
 }
