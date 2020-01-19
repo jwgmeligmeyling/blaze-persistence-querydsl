@@ -10,9 +10,11 @@ import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.MapExpression;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLTemplates;
@@ -31,6 +33,8 @@ import java.util.Map;
 public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
+
+    private boolean cachable = false;
 
     public BlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
         super(null, JPQLNextTemplates.DEFAULT, new DefaultQueryMetadata());
@@ -133,6 +137,17 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
                 criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
             }
         }
+
+        for (Map.Entry<String, Object> entry : hints.entries()) {
+            if (entry.getValue() instanceof String) {
+                criteriaBuilder.setProperty(entry.getKey(), (String) entry.getValue());
+            }
+        }
+
+        if (cachable) {
+            criteriaBuilder.setCacheable(true);
+        }
+
         return criteriaBuilder;
     }
 
@@ -141,6 +156,7 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
     public BlazeJPAQuery<T> clone(EntityManager entityManager, JPQLTemplates templates) {
         BlazeJPAQuery<T> q = new BlazeJPAQuery<T>(entityManager, templates, getMetadata().clone(), criteriaBuilderFactory);
         q.clone(this);
+        q.cachable = cachable;
         return q;
     }
 
@@ -252,4 +268,36 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
     }
 
     // End workaround
+
+    // Full joins
+    public <P> BlazeJPAQuery<T> fullJoin(CollectionExpression<?,P> target) {
+        return queryMixin.fullJoin(target);
+    }
+
+    public <P> BlazeJPAQuery<T> fullJoin(CollectionExpression<?,P>target, Path<P> alias) {
+        return queryMixin.fullJoin(target, alias);
+    }
+
+    public <P> BlazeJPAQuery<T>  fullJoin(EntityPath<P> target) {
+        return queryMixin.fullJoin(target);
+    }
+
+    public <P> BlazeJPAQuery<T>  fullJoin(EntityPath<P> target, Path<P> alias) {
+        return queryMixin.fullJoin(target, alias);
+    }
+
+    public <P> BlazeJPAQuery<T>  fullJoin(MapExpression<?,P> target) {
+        return queryMixin.fullJoin(target);
+    }
+
+    public <P> BlazeJPAQuery<T>  fullJoin(MapExpression<?,P> target, Path<P> alias) {
+        return queryMixin.fullJoin(target, alias);
+    }
+
+    // End full joins
+
+    public void setCacheable(boolean cacheable) {
+        this.cachable = cacheable;
+    }
+
 }
