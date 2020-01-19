@@ -61,6 +61,7 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
+import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 
 public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
@@ -256,7 +257,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         renderConstants(criteriaBuilder);
         renderModifiers(modifiers, criteriaBuilder);
 
-
         for (Expression<?> arg : expandProjection(select)) {
             renderSingleSelect(arg, criteriaBuilder);
         }
@@ -315,25 +315,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             }
         }
 
-        String expression = renderExpression(select);
-        Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
-        if (subQueryToLabel.isEmpty()) {
-            if (alias != null) {
-                selectBuilder.select(expression, alias);
-            } else {
-                selectBuilder.select(expression);
-            }
-        } else {
-            MultipleSubqueryInitiator<?> subqueryInitiator = alias != null ?
-                    selectBuilder.selectSubqueries(expression, alias) :  selectBuilder.selectSubqueries(expression);
-
-            for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-                pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
-                serializeSubQuery(entry.getKey());
-                popSubqueryInitiator();
-            }
-            subqueryInitiator.end();
-        }
+        final String finalAlias = alias;
+        setExpressionSubqueries(select,
+                (expression) -> finalAlias != null ? selectBuilder.select(expression, finalAlias) : selectBuilder.select(expression),
+                (expression) -> finalAlias != null ? selectBuilder.selectSubqueries(expression, finalAlias) : selectBuilder.selectSubqueries(expression));
     }
 
     private int length = 0;
@@ -463,19 +448,19 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         return criteriaBuilder;
     }
 
-    private void setExpressionSubqueries(Expression<?> expression, Consumer<String> setExpression, Function<String, MultipleSubqueryInitiator<?>> setExpressionSubqueries) {
+    private <X> X setExpressionSubqueries(Expression<?> expression, Function<String, ? extends X> setExpression, Function<String, MultipleSubqueryInitiator<? extends X>> setExpressionSubqueries) {
         String expressionString = renderExpression(expression);
         Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
         if (subQueryToLabel.isEmpty()) {
-            setExpression.accept(expressionString);
+            return setExpression.apply(expressionString);
         } else {
-            MultipleSubqueryInitiator<?> subqueryInitiator = setExpressionSubqueries.apply(expressionString);
+            MultipleSubqueryInitiator<? extends X> subqueryInitiator = setExpressionSubqueries.apply(expressionString);
             for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
                 pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
                 serializeSubQuery(entry.getKey());
                 popSubqueryInitiator();
             }
-            subqueryInitiator.end();
+            return subqueryInitiator.end();
         }
     }
 
@@ -496,25 +481,23 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                                 baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
                         subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
                         renderCTEQuery(recursiveCriteriaBuilder, subQuery).end();
-                        return;
+                    } else {
+                        FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
+
+                        Expression<?> subQueryExpression = args.get(1);
+                        Object result = renderWithQuery(cteBuilder, subQueryExpression);
+
+                        if (result instanceof FinalSetOperationCTECriteriaBuilder) {
+                            ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
+                        }
+                        else if (result instanceof FullSelectCTECriteriaBuilder) {
+                            ((FullSelectCTECriteriaBuilder<?>) result).end();
+                        }
                     }
-
-                    FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
-
-                    Expression<?> subQueryExpression = args.get(1);
-                    Object result = renderWithQuery(cteBuilder, subQueryExpression);
-
-                    if (result instanceof FinalSetOperationCTECriteriaBuilder) {
-                        ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
-                    }
-                    else if (result instanceof FullSelectCTECriteriaBuilder) {
-                        ((FullSelectCTECriteriaBuilder<?>) result).end();
-                    }
-
                     return;
                 case WITH_RECURSIVE_COLUMNS:
-                    recursive = true;
                 case WITH_COLUMNS:
+                    recursive = operator == WITH_RECURSIVE_COLUMNS;
                     cteEntityPath = (EntityPath<?>) args.get(0);
                     cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
                     return;
