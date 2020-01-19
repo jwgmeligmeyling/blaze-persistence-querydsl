@@ -7,6 +7,7 @@ import com.blazebit.persistence.spi.CriteriaBuilderConfiguration;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.Param;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -73,6 +74,36 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(1));
+
+            List<Tuple> fetch = query.fetch();
+            Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
+    public void testParameterExpression() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            Param<Integer> param = new Param<Integer>(Integer.class, "theSuperName");
+
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+                    .select(testEntity.field.as("blep"), testEntity.field.substring(2))
+                    .where(testEntity.field.length().gt(param))
+                    .set(param, 1);
+
+            List<Tuple> fetch = query.fetch();
+            Assert.assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
+    public void testParameterExpressionInSelect() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            Param<Integer> param = new Param<Integer>(Integer.class, "theSuperName");
+
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+                    .select(testEntity.field.as("blep"), param)
+                    .where(testEntity.field.length().gt(param))
+                    .set(param, 1);
 
             List<Tuple> fetch = query.fetch();
             Assert.assertFalse(fetch.isEmpty());

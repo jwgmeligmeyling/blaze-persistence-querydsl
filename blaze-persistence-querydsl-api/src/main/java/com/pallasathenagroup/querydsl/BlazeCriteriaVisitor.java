@@ -254,7 +254,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         renderHaving(metadata, criteriaBuilder);
         renderOrderBy(metadata, criteriaBuilder);
         renderParameters(metadata, criteriaBuilder);
-        renderConstants(criteriaBuilder);
         renderModifiers(modifiers, criteriaBuilder);
 
         for (Expression<?> arg : expandProjection(select)) {
@@ -346,6 +345,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         append(":");
         append(constantToLabel.computeIfAbsent(constant, o -> "param_" + (constantToLabel.size() + 1)));
         if (wrap) append(")");
+    }
+
+    @Override
+    public Void visit(ParamExpression<?> param, Void context) {
+        append(":").append(param.getName());
+        return null;
     }
 
     @Override
