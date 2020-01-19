@@ -228,6 +228,26 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
 
+
+
+    @Test
+    public void testCTEFromValues() {
+        doInJPA(this::sessionFactory, entityManager -> {
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                            .fromValues(book, Collections.singleton(theBook))
+                            .select(book.id, book.name))
+                    .select(idHolderCte.id).from(idHolderCte)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
     @Test
     public void testRecursiveCTEUnion() {
         doInJPA(this::sessionFactory, entityManager -> {
