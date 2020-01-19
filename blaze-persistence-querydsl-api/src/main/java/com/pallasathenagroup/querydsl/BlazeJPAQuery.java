@@ -2,9 +2,10 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.blazebit.persistence.KeysetPage;
+import com.blazebit.persistence.PagedList;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.NonUniqueResultException;
-import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.QueryResults;
@@ -85,26 +86,13 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
 
     // TODO @Override
     protected Query createQuery(@Nullable QueryModifiers modifiers, boolean forCount) {
-        BlazeCriteriaVisitor<Tuple> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, getTemplates());
-        blazeCriteriaVisitor.serialize(getMetadata(), false, null);
-        CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
-
-        if (modifiers != null) {
-            if (modifiers.getLimitAsInteger() != null) {
-                criteriaBuilder.setMaxResults(modifiers.getLimitAsInteger());
-            }
-            if (modifiers.getOffsetAsInteger() != null) {
-                criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
-            }
-        }
-
-        System.out.println("Query: " + criteriaBuilder.getQueryString());
+        CriteriaBuilder<T> criteriaBuilder = getCriteriaBuilder(modifiers);
 
         if (forCount) {
             return criteriaBuilder.getCountQuery();
         }
 
-        TypedQuery<Tuple> query = criteriaBuilder.getQuery();
+        TypedQuery<T> query = criteriaBuilder.getQuery();
 
         if (lockMode != null) {
             query.setLockMode(lockMode);
@@ -118,6 +106,34 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
         }
 
         return query;
+    }
+
+    public PagedList<T> fetchPage(int firstResult, int maxResults) {
+        return getCriteriaBuilder(getMetadata().getModifiers())
+                .page(firstResult, maxResults)
+                .getResultList();
+    }
+
+    public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
+        return getCriteriaBuilder(getMetadata().getModifiers())
+                .page(keysetPage, firstResult, maxResults)
+                .getResultList();
+    }
+
+    protected CriteriaBuilder<T> getCriteriaBuilder(@Nullable QueryModifiers modifiers) {
+        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, getTemplates());
+        blazeCriteriaVisitor.serialize(getMetadata(), false, null);
+        CriteriaBuilder<T> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
+
+        if (modifiers != null) {
+            if (modifiers.getLimitAsInteger() != null) {
+                criteriaBuilder.setMaxResults(modifiers.getLimitAsInteger());
+            }
+            if (modifiers.getOffsetAsInteger() != null) {
+                criteriaBuilder.setFirstResult(modifiers.getOffsetAsInteger());
+            }
+        }
+        return criteriaBuilder;
     }
 
 

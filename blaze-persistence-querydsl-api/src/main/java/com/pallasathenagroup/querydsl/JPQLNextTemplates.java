@@ -1,7 +1,5 @@
 package com.pallasathenagroup.querydsl;
 
-import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Ops;
 import com.querydsl.jpa.DefaultQueryHandler;
 import com.querydsl.jpa.JPQLTemplates;
