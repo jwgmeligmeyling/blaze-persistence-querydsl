@@ -189,7 +189,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
                     .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book).where(book.id.eq(1L)), select(book.id, book.name).from(book)
-                            .where(book.id.notIn(select(idHolderCte.id).from(idHolderCte)))))
+                            .join(idHolderCte).on(idHolderCte.id.add(1L).eq(book.id))))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 

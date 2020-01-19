@@ -1,28 +1,21 @@
 package com.pallasathenagroup.querydsl;
 
-import com.blazebit.persistence.BaseOngoingFinalSetOperationBuilder;
 import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.DistinctBuilder;
 import com.blazebit.persistence.FinalSetOperationCTECriteriaBuilder;
-import com.blazebit.persistence.FinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
 import com.blazebit.persistence.FullQueryBuilder;
 import com.blazebit.persistence.FullSelectCTECriteriaBuilder;
 import com.blazebit.persistence.GroupByBuilder;
 import com.blazebit.persistence.HavingBuilder;
+import com.blazebit.persistence.JoinOnBuilder;
 import com.blazebit.persistence.JoinType;
-import com.blazebit.persistence.LeafOngoingFinalSetOperationCTECriteriaBuilder;
-import com.blazebit.persistence.LeafOngoingSetOperationCTECriteriaBuilder;
-import com.blazebit.persistence.LeafOngoingSetOperationCriteriaBuilder;
 import com.blazebit.persistence.LimitBuilder;
-import com.blazebit.persistence.MiddleOngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
-import com.blazebit.persistence.OngoingSetOperationBuilder;
-import com.blazebit.persistence.OngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
 import com.blazebit.persistence.SelectBaseCTECriteriaBuilder;
@@ -30,11 +23,10 @@ import com.blazebit.persistence.SelectBuilder;
 import com.blazebit.persistence.SelectCTECriteriaBuilder;
 import com.blazebit.persistence.SelectRecursiveCTECriteriaBuilder;
 import com.blazebit.persistence.SetOperationBuilder;
-import com.blazebit.persistence.StartOngoingSetOperationBuilder;
-import com.blazebit.persistence.StartOngoingSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
+import com.google.common.collect.ImmutableList;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryFlag.Position;
@@ -61,15 +53,14 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.IdentityHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
-import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
+import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 
 public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
@@ -157,7 +148,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private void renderHaving(QueryMetadata metadata, HavingBuilder<?> criteriaBuilder) {
         if (metadata.getHaving() != null) {
-            criteriaBuilder.setHavingExpression(renderExpression(metadata.getHaving()));
+            setExpressionSubqueries(metadata.getHaving(), criteriaBuilder::havingExpression, criteriaBuilder::havingExpressionSubqueries);
         }
     }
 
@@ -169,19 +160,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private void renderWhere(QueryMetadata metadata, WhereBuilder<?> criteriaBuilder) {
         if (metadata.getWhere() != null) {
-            String expression = renderExpression(metadata.getWhere());
-            Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
-            if (subQueryToLabel.isEmpty()) {
-                criteriaBuilder.setWhereExpression(expression);
-            } else {
-                MultipleSubqueryInitiator<?> subqueryInitiator = criteriaBuilder.setWhereExpressionSubqueries(expression);
-                for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-                    pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
-                    serializeSubQuery(entry.getKey());
-                    popSubqueryInitiator();
-                }
-                subqueryInitiator.end();
-            }
+            setExpressionSubqueries(metadata.getWhere(), criteriaBuilder::whereExpression, criteriaBuilder::whereExpressionSubqueries);
         }
     }
 
@@ -191,7 +170,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         }
     }
 
-    private <X extends FromBuilder<X>> X renderJoins(QueryMetadata metadata, FromBaseBuilder<X> subqueryInitiator) {
+    private <X extends FromBuilder<X>> X renderJoins(QueryMetadata metadata, FromBaseBuilder<X> fromBuilder) {
         X criteriaBuilder = null;
         for (JoinExpression joinExpression : metadata.getJoins()) {
             boolean fetch = joinExpression.hasFlag(JPAQueryMixin.FETCH);
@@ -210,9 +189,9 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             if (target instanceof ValuesExpression<?>) {
                 ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
                 if ( valuesExpression.isIdentifiable() ) {
-                    criteriaBuilder = (X) subqueryInitiator.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) fromBuilder.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
                 } else {
-                    criteriaBuilder = (X) subqueryInitiator.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) fromBuilder.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
                 }
             }
             else if (target instanceof Path<?>) {
@@ -224,7 +203,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                 switch (joinExpression.getType()) {
                     case DEFAULT:
-                        criteriaBuilder = subqueryInitiator.from(entityPath.getType(), alias);
+                        criteriaBuilder = fromBuilder.from(entityPath.getType(), alias);
                         break;
                     default:
                         JoinType joinType = getJoinType(joinExpression);
@@ -237,17 +216,17 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                             if (!hasCondition) {
                                 throw new IllegalStateException("No on-clause for entity join!");
                             }
-                            criteriaBuilder.joinOn(entityPath.getType(), alias, joinType)
-                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
+                            JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(entityPath.getType(), alias, joinType);
+                            setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
                         } else if (!hasCondition) {
                             if (fetch) {
-                                ((FullQueryBuilder) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
+                                ((FullQueryBuilder<?,?>) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
                             } else {
                                 criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
                             }
                         } else {
-                            criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType)
-                                    .setOnExpression(renderExpression(joinExpression.getCondition()));
+                            JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType);
+                            setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
                         }
 
                         break;
@@ -277,16 +256,20 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         renderConstants(criteriaBuilder);
         renderModifiers(modifiers, criteriaBuilder);
 
-        if (select instanceof FactoryExpression<?>) {
-            FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
-            for (Expression<?> arg : factoryExpression.getArgs()) {
-                renderSingleSelect(arg, criteriaBuilder);
-            }
-        } else {
-            renderSingleSelect(select, criteriaBuilder);
+
+        for (Expression<?> arg : expandProjection(select)) {
+            renderSingleSelect(arg, criteriaBuilder);
         }
 
         criteriaBuilder.end();
+    }
+
+    private List<? extends Expression<?>> expandProjection(Expression<?> expr) {
+        if (expr instanceof FactoryExpression) {
+            return ((FactoryExpression<?>) expr).getArgs();
+        } else {
+            return ImmutableList.of(expr);
+        }
     }
 
     private JoinType getJoinType(JoinExpression joinExpression) {
@@ -332,8 +315,25 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             }
         }
 
-        String s = renderExpression(select);
-        selectBuilder.select(s, alias);
+        String expression = renderExpression(select);
+        Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
+        if (subQueryToLabel.isEmpty()) {
+            if (alias != null) {
+                selectBuilder.select(expression, alias);
+            } else {
+                selectBuilder.select(expression);
+            }
+        } else {
+            MultipleSubqueryInitiator<?> subqueryInitiator = alias != null ?
+                    selectBuilder.selectSubqueries(expression, alias) :  selectBuilder.selectSubqueries(expression);
+
+            for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+                pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
+                serializeSubQuery(entry.getKey());
+                popSubqueryInitiator();
+            }
+            subqueryInitiator.end();
+        }
     }
 
     private int length = 0;
@@ -396,8 +396,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     private List<Path<?>> cteAliases;
     private boolean recursive;
 
-    private <X extends SelectBaseCTECriteriaBuilder<?> & SetOperationBuilder<?, ?>>
-    Object renderWithQuery(X criteriaBuilder, Expression<?> expression) {
+    private <X extends SelectBaseCTECriteriaBuilder<?> & SetOperationBuilder<?, ?>> Object renderWithQuery(X criteriaBuilder, Expression<?> expression) {
         if (expression instanceof Operation<?>) {
             Operation<?> setOperation = (Operation<?>) expression;
             renderWithQuery(criteriaBuilder, setOperation.getArg(0));
@@ -429,33 +428,55 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     break;
             }
             setBuilder = renderWithQuery((X) setBuilder, setOperation.getArg(1));
-            return ((BaseOngoingSetOperationBuilder) setBuilder).endSet();
+            return ((BaseOngoingSetOperationBuilder<?, ?, ?>) setBuilder).endSet();
         }
         else {
-
-            SubQueryExpression<?> subQuery = (SubQueryExpression) expression;
-            QueryMetadata subQueryMetadata = subQuery.getMetadata();
-
-            renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
-            renderDistinct(subQueryMetadata, criteriaBuilder);
-            renderWhere(subQueryMetadata, criteriaBuilder);
-            renderGroupBy(subQueryMetadata, criteriaBuilder);
-            renderHaving(subQueryMetadata, criteriaBuilder);
-            renderOrderBy(subQueryMetadata, criteriaBuilder);
-            renderParameters(subQueryMetadata, criteriaBuilder);
-            renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
-
-            FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
-
-            for (int i = 0; i < cteAliases.size(); i++) {
-                Path<?> alias = cteAliases.get(i);
-                String aliasString = relativePathString(cteEntityPath, alias);
-                Expression<?> projExpression = projection.getArgs().get(i);
-                String expressionString = renderExpression(projExpression);
-                criteriaBuilder.bind(aliasString).select(expressionString);
-            }
+            SubQueryExpression<?> subQuery = (SubQueryExpression<?>) expression;
+            renderCTEQuery(criteriaBuilder, subQuery);
         }
         return criteriaBuilder;
+    }
+
+    private <X extends SelectBaseCTECriteriaBuilder<?>> X renderCTEQuery(X criteriaBuilder, SubQueryExpression<?> subQuery) {
+        QueryMetadata subQueryMetadata = subQuery.getMetadata();
+
+        renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
+        renderDistinct(subQueryMetadata, criteriaBuilder);
+        renderWhere(subQueryMetadata, criteriaBuilder);
+        renderGroupBy(subQueryMetadata, criteriaBuilder);
+        renderHaving(subQueryMetadata, criteriaBuilder);
+        renderOrderBy(subQueryMetadata, criteriaBuilder);
+        renderParameters(subQueryMetadata, criteriaBuilder);
+        renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
+
+        List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
+
+        for (int i = 0; i < cteAliases.size(); i++) {
+            Path<?> alias = cteAliases.get(i);
+            String aliasString = relativePathString(cteEntityPath, alias);
+            Expression<?> projExpression = projection.get(i);
+
+            SelectBuilder<?> bindBuilder = criteriaBuilder.bind(aliasString);
+            setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
+        }
+
+        return criteriaBuilder;
+    }
+
+    private void setExpressionSubqueries(Expression<?> expression, Consumer<String> setExpression, Function<String, MultipleSubqueryInitiator<?>> setExpressionSubqueries) {
+        String expressionString = renderExpression(expression);
+        Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
+        if (subQueryToLabel.isEmpty()) {
+            setExpression.accept(expressionString);
+        } else {
+            MultipleSubqueryInitiator<?> subqueryInitiator = setExpressionSubqueries.apply(expressionString);
+            for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
+                pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
+                serializeSubQuery(entry.getKey());
+                popSubqueryInitiator();
+            }
+            subqueryInitiator.end();
+        }
     }
 
     @Override
@@ -466,69 +487,17 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     Expression<?> withColumns = args.get(0);
                     withColumns.accept(this, null);
 
-
                     if (recursive) {
                         Operation<?> unionOperation = (Operation<?>) args.get(1);
-                        SubQueryExpression<?> subQuery = (SubQueryExpression) unionOperation.getArg(0);
-                        QueryMetadata subQueryMetadata = subQuery.getMetadata();
-                        FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
-
-                        SelectRecursiveCTECriteriaBuilder<CriteriaBuilder<T>> baseCriteriaBuilder = criteriaBuilder.withRecursive(cteEntityPath.getType());
-                        SelectCTECriteriaBuilder<CriteriaBuilder<T>> recursiveCriteriaBuilder = null;
-
-                        renderJoins(subQueryMetadata, (FromBaseBuilder) baseCriteriaBuilder);
-                        renderDistinct(subQueryMetadata, baseCriteriaBuilder);
-                        renderWhere(subQueryMetadata, baseCriteriaBuilder);
-                        renderGroupBy(subQueryMetadata, baseCriteriaBuilder);
-                        renderHaving(subQueryMetadata, baseCriteriaBuilder);
-                        renderOrderBy(subQueryMetadata, baseCriteriaBuilder);
-                        renderParameters(subQueryMetadata, baseCriteriaBuilder);
-                        renderModifiers(subQueryMetadata.getModifiers(), baseCriteriaBuilder);
-
-
-                        for (int i = 0; i < cteAliases.size(); i++) {
-                            Path<?> alias = cteAliases.get(i);
-                            String aliasString = relativePathString(cteEntityPath, alias);
-                            Expression<?> projExpression = projection.getArgs().get(i);
-                            String expressionString = renderExpression(projExpression);
-                            baseCriteriaBuilder.bind(aliasString).select(expressionString);
-                        }
-
-
-                        switch ((JPQLNextOps) unionOperation.getOperator()) {
-                            case SET_UNION:
-                                recursiveCriteriaBuilder = baseCriteriaBuilder.union();
-                                break;
-                            case SET_UNION_ALL:
-                                recursiveCriteriaBuilder = baseCriteriaBuilder.unionAll();
-                                break;
-                        }
-
-                        subQuery = (SubQueryExpression) unionOperation.getArg(1);
-                        subQueryMetadata = subQuery.getMetadata();
-                        projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
-
-                        renderJoins(subQueryMetadata, (FromBaseBuilder) recursiveCriteriaBuilder);
-                        renderDistinct(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderWhere(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderGroupBy(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderHaving(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderOrderBy(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderParameters(subQueryMetadata, recursiveCriteriaBuilder);
-                        renderModifiers(subQueryMetadata.getModifiers(), recursiveCriteriaBuilder);
-
-                        for (int i = 0; i < cteAliases.size(); i++) {
-                            Path<?> alias = cteAliases.get(i);
-                            String aliasString = relativePathString(cteEntityPath, alias);
-                            Expression<?> projExpression = projection.getArgs().get(i);
-                            String expressionString = renderExpression(projExpression);
-                            recursiveCriteriaBuilder.bind(aliasString).select(expressionString);
-                        }
-
-                        recursiveCriteriaBuilder.end();
+                        SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
+                        SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
+                            renderCTEQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
+                        SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
+                                baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
+                        subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
+                        renderCTEQuery(recursiveCriteriaBuilder, subQuery).end();
                         return;
                     }
-
 
                     FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
 
@@ -536,35 +505,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     Object result = renderWithQuery(cteBuilder, subQueryExpression);
 
                     if (result instanceof FinalSetOperationCTECriteriaBuilder) {
-                        result = ((FinalSetOperationCTECriteriaBuilder) result).end();
+                        ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
                     }
                     else if (result instanceof FullSelectCTECriteriaBuilder) {
-                        result = ((FullSelectCTECriteriaBuilder) result).end();
+                        ((FullSelectCTECriteriaBuilder<?>) result).end();
                     }
 
-//                    SubQueryExpression<?> subQuery = (SubQueryExpression) args.get(1);
-//                    QueryMetadata subQueryMetadata = subQuery.getMetadata();
-//
-//                    renderJoins(subQueryMetadata, cteBuilder);
-//                    renderDistinct(subQueryMetadata, cteBuilder);
-//                    renderWhere(subQueryMetadata, cteBuilder);
-//                    renderGroupBy(subQueryMetadata, cteBuilder);
-//                    renderHaving(subQueryMetadata, cteBuilder);
-//                    renderOrderBy(subQueryMetadata, cteBuilder);
-//                    renderParameters(subQueryMetadata, cteBuilder);
-//                    renderModifiers(subQueryMetadata.getModifiers(), cteBuilder);
-//
-//                    FactoryExpression<?> projection = (FactoryExpression<?>) subQueryMetadata.getProjection();
-//
-//                    for (int i = 0; i < cteAliases.size(); i++) {
-//                        Path<?> alias = cteAliases.get(i);
-//                        String aliasString = relativePathString(cteEntityPath, alias);
-//                        Expression<?> expression = projection.getArgs().get(i);
-//                        String expressionString = renderExpression(expression);
-//                        cteBuilder.bind(aliasString).select(expressionString);
-//                    }
-//
-//                    cteBuilder.end();
                     return;
                 case WITH_RECURSIVE_COLUMNS:
                     recursive = true;
