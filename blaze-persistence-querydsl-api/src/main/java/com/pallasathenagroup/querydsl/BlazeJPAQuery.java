@@ -19,7 +19,6 @@ import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
-import com.querydsl.jpa.impl.JPAProvider;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
@@ -30,7 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
+public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> implements ExtendedJPAQuery<T, BlazeJPAQuery<T>>, ExtendedFetchable<T> {
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
 
@@ -61,22 +60,26 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
+    @Override
     public <X> BlazeJPAQuery<T> fromValues(EntityPath<X> path, Collection<X> elements) {
         this.queryMixin.from(new ValuesExpression<>(path, elements, false));
         return this;
     }
 
+    @Override
     public <X> BlazeJPAQuery<T> fromIdentifiableValues(EntityPath<X> path, Collection<X> elements) {
         this.queryMixin.from(new ValuesExpression<>(path, elements, true));
         return this;
     }
 
+    @Override
     public WithBuilder<BlazeJPAQuery<T>> with(EntityPath<?> alias, Path<?>... columns) {
         Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
         Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_COLUMNS, alias, columnsCombined);
         return new WithBuilder<>(queryMixin, aliasCombined);
     }
 
+    @Override
     public WithBuilder<BlazeJPAQuery<T>> withRecursive(EntityPath<?> alias, Path<?>... columns) {
         Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
         Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
@@ -112,12 +115,14 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
         return query;
     }
 
+    @Override
     public PagedList<T> fetchPage(int firstResult, int maxResults) {
         return getCriteriaBuilder(getMetadata().getModifiers())
                 .page(firstResult, maxResults)
                 .getResultList();
     }
 
+    @Override
     public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
         return getCriteriaBuilder(getMetadata().getModifiers())
                 .page(keysetPage, firstResult, maxResults)
@@ -162,7 +167,7 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
 
     @Override
     public BlazeJPAQuery<T> clone(EntityManager entityManager) {
-        return clone(entityManager, JPAProvider.getTemplates(entityManager));
+        return clone(entityManager, getTemplates());
     }
 
     @Override
@@ -270,27 +275,33 @@ public class BlazeJPAQuery<T> extends AbstractJPAQuery<T, BlazeJPAQuery<T>> {
     // End workaround
 
     // Full joins
+    @Override
     public <P> BlazeJPAQuery<T> fullJoin(CollectionExpression<?,P> target) {
         return queryMixin.fullJoin(target);
     }
 
+    @Override
     public <P> BlazeJPAQuery<T> fullJoin(CollectionExpression<?,P>target, Path<P> alias) {
         return queryMixin.fullJoin(target, alias);
     }
 
-    public <P> BlazeJPAQuery<T>  fullJoin(EntityPath<P> target) {
+    @Override
+    public <P> BlazeJPAQuery<T> fullJoin(EntityPath<P> target) {
         return queryMixin.fullJoin(target);
     }
 
-    public <P> BlazeJPAQuery<T>  fullJoin(EntityPath<P> target, Path<P> alias) {
+    @Override
+    public <P> BlazeJPAQuery<T> fullJoin(EntityPath<P> target, Path<P> alias) {
         return queryMixin.fullJoin(target, alias);
     }
 
-    public <P> BlazeJPAQuery<T>  fullJoin(MapExpression<?,P> target) {
+    @Override
+    public <P> BlazeJPAQuery<T> fullJoin(MapExpression<?,P> target) {
         return queryMixin.fullJoin(target);
     }
 
-    public <P> BlazeJPAQuery<T>  fullJoin(MapExpression<?,P> target, Path<P> alias) {
+    @Override
+    public <P> BlazeJPAQuery<T> fullJoin(MapExpression<?,P> target, Path<P> alias) {
         return queryMixin.fullJoin(target, alias);
     }
 
