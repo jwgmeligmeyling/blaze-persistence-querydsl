@@ -262,4 +262,38 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
 
+    @Test
+    public void testBindBuilder() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .with(idHolderCte)
+                        .bind(idHolderCte.id).select(book.id)
+                        .bind(idHolderCte.name).select(book.name)
+                        .from(book).where(book.id.eq(1L))
+                    .end()
+                    .select(idHolderCte.id).from(idHolderCte)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testRecursiveBindBuilder() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .with(idHolderCte)
+                        .bind(idHolderCte.id).select(book.id)
+                        .bind(idHolderCte.name).select(book.name)
+                        .from(book).where(book.id.eq(1L))
+                    .end()
+                    .select(idHolderCte.id).from(idHolderCte)
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
 }
