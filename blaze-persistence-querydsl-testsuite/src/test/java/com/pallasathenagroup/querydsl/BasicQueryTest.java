@@ -4,11 +4,10 @@ import com.blazebit.persistence.Criteria;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.spi.CriteriaBuilderConfiguration;
+import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Param;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
@@ -284,10 +283,14 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         doInJPA(this::sessionFactory, entityManager -> {
 
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
-                    .with(idHolderCte)
+                    .withRecursive(idHolderCte)
                         .bind(idHolderCte.id).select(book.id)
                         .bind(idHolderCte.name).select(book.name)
                         .from(book).where(book.id.eq(1L))
+                        .union()
+                        .bind(idHolderCte.id).select(book.id)
+                        .bind(idHolderCte.name).select(book.name)
+                        .from(book).join(idHolderCte).on(idHolderCte.id.add(1L).eq(book.id))
                     .end()
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();

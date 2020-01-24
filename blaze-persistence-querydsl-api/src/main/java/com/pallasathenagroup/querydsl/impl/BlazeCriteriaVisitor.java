@@ -1,4 +1,4 @@
-package com.pallasathenagroup.querydsl;
+package com.pallasathenagroup.querydsl.impl;
 
 import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
 import com.blazebit.persistence.CriteriaBuilder;
@@ -27,6 +27,8 @@ import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
 import com.google.common.collect.ImmutableList;
+import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryFlag.Position;
@@ -56,7 +58,6 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -478,7 +479,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     withColumns.accept(this, null);
 
                     if (recursive) {
-                        Operation<?> unionOperation = (Operation<?>) args.get(1);
+                        Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
                         SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
                         SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
                             renderCTEQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
