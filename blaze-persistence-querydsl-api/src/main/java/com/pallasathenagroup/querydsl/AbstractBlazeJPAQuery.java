@@ -29,11 +29,11 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T, Q>> extends AbstractJPAQuery<T, Q> implements ExtendedJPAQuery<T, Q>, ExtendedFetchable<T> {
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
@@ -107,11 +107,12 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     // TODO @Override
+    @SuppressWarnings("unchecked")
     protected Query createQuery(@Nullable QueryModifiers modifiers, boolean forCount) {
         Queryable<T, ?> criteriaBuilder = getCriteriaBuilder(modifiers);
 
         if (forCount) {
-            return ((FullQueryBuilder) criteriaBuilder).getCountQuery();
+            return ((FullQueryBuilder<T, ?>) criteriaBuilder).getCountQuery();
         }
 
         TypedQuery<T> query = criteriaBuilder.getQuery();
@@ -131,15 +132,17 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(int firstResult, int maxResults) {
-        return ((FullQueryBuilder) getCriteriaBuilder(getMetadata().getModifiers()))
+        return ((FullQueryBuilder<T,?>) getCriteriaBuilder(getMetadata().getModifiers()))
                 .page(firstResult, maxResults)
                 .getResultList();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
-        return ((FullQueryBuilder) getCriteriaBuilder(getMetadata().getModifiers()))
+        return ((FullQueryBuilder<T,?>) getCriteriaBuilder(getMetadata().getModifiers()))
                 .page(keysetPage, firstResult, maxResults)
                 .getResultList();
     }
@@ -168,7 +171,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             criteriaBuilder.setCacheable(true);
         }
 
-        return (Queryable) blazeCriteriaVisitor.getQueryable();
+        return blazeCriteriaVisitor.getQueryable();
     }
 
     @Override
@@ -200,7 +203,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
                 Query query = createQuery(modifiers, false);
                 @SuppressWarnings("unchecked")
                 List<T> list = (List<T>) getResultList(query);
-                return new QueryResults<T>(list, modifiers, total);
+                return new QueryResults<>(list, modifiers, total);
             } else {
                 return QueryResults.emptyResults();
             }
@@ -214,7 +217,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         // TODO : use lazy fetch here?
         if (projection != null) {
             List<?> results = query.getResultList();
-            List<Object> rv = new ArrayList<Object>(results.size());
+            List<Object> rv = new ArrayList<>(results.size());
             for (Object o : results) {
                 if (o != null) {
                     if (!o.getClass().isArray()) {
@@ -299,12 +302,14 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     // End full joins
 
-    public void setCacheable(boolean cacheable) {
+    public Q setCacheable(boolean cacheable) {
         this.cachable = cacheable;
+        return queryMixin.getSelf();
     }
 
     // Union stuff
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private <RT> SetOperation<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
@@ -314,140 +319,34 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return new SetOperationImpl(this);
     }
 
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> union(SubQueryExpression<RT>... sq) {
-        return union(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> union(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_UNION, sq);
     }
 
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> unionAll(SubQueryExpression<RT>... sq) {
-        return unionAll(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_UNION_ALL, sq);
     }
 
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> intersect(SubQueryExpression<RT>... sq) {
-        return intersect(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> intersect(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_INTERSECT, sq);
     }
 
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> intersectAll(SubQueryExpression<RT>... sq) {
-        return intersectAll(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> intersectAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_INTERSECT_ALL, sq);
     }
 
-
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> except(SubQueryExpression<RT>... sq) {
-        return except(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> except(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_EXCEPT, sq);
     }
 
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
-    public <RT> SetOperation<RT> exceptAll(SubQueryExpression<RT>... sq) {
-        return exceptAll(Arrays.asList(sq));
-    }
-
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT>
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     public <RT> SetOperation<RT> exceptAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_EXCEPT_ALL, sq);
     }
 
-    public CriteriaBuilderFactory getCriteriaBuilderFactory() {
-        return criteriaBuilderFactory;
-    }
 }

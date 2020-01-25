@@ -8,7 +8,12 @@ import com.querydsl.jpa.JPQLTemplates;
 
 import javax.persistence.EntityManager;
 
+@SuppressWarnings("unused")
 public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>> implements ExtendedJPAQuery<T, BlazeJPAQuery<T>>, ExtendedFetchable<T> {
+
+    public BlazeJPAQuery() {
+        this(null);
+    }
 
     public BlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
         super(criteriaBuilderFactory);

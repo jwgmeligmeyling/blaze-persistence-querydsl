@@ -275,43 +275,21 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             entityManager.merge(theSequel);
         });
 
-
-//        doInJPA(this::sessionFactory, entityManager -> {
-//
-//
-//            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
-//                    .union(select(book).from(book).where(book.id.eq(1337l)), select(book).from(book).where(book.id.eq(42l)), select(book).from(book).where(book.id.eq(41l)))
-//                    .fetch();
-//
-//            System.out.println(fetch);
-//        });
         doInJPA(this::sessionFactory, entityManager -> {
 
 
             List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
                     .union(select(book).from(book).where(book.id.eq(1337l)),
-                        new BlazeJPAQuery<TestEntity>(null, null).intersect(
+                        new BlazeJPAQuery<TestEntity>().intersect(
                                 select(book).from(book).where(book.id.eq(41l)),
-                                new BlazeJPAQuery<TestEntity>(null, null).except(
+                                new BlazeJPAQuery<TestEntity>().except(
                                         select(book).from(book).where(book.id.eq(42l)),
-                                        select(book).from(book).where(book.id.eq(43l))
-                                )
-                                ),
+                                        select(book).from(book).where(book.id.eq(43l)))),
                                 select(book).from(book).where(book.id.eq(46l))
                             )
                     .fetch();
 
             System.out.println(fetch);
-//
-//            criteriaBuilderFactory.create(entityManager, Book.class)
-//                    .from(Book.class, "book").where("book.id").eq(1337l)
-//                    .startUnion()
-//                    .from(Book.class, "book").where("book.id").eq(1336l)
-//                    .intersect()
-//                    .from(Book.class, "book").where("book.id").eq(1339l)
-//                    .endSet()
-//                    .endSet()
-//                    .getResultList();
         });
     }
 
