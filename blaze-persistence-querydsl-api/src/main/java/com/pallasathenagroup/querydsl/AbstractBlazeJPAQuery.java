@@ -2,8 +2,10 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.blazebit.persistence.FullQueryBuilder;
 import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
+import com.blazebit.persistence.Queryable;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.NonUniqueResultException;
@@ -110,10 +112,10 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     // TODO @Override
     protected Query createQuery(@Nullable QueryModifiers modifiers, boolean forCount) {
-        CriteriaBuilder<T> criteriaBuilder = getCriteriaBuilder(modifiers);
+        Queryable<T, ?> criteriaBuilder = getCriteriaBuilder(modifiers);
 
         if (forCount) {
-            return criteriaBuilder.getCountQuery();
+            return ((FullQueryBuilder) criteriaBuilder).getCountQuery();
         }
 
         TypedQuery<T> query = criteriaBuilder.getQuery();
@@ -134,21 +136,21 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     @Override
     public PagedList<T> fetchPage(int firstResult, int maxResults) {
-        return getCriteriaBuilder(getMetadata().getModifiers())
+        return ((FullQueryBuilder) getCriteriaBuilder(getMetadata().getModifiers()))
                 .page(firstResult, maxResults)
                 .getResultList();
     }
 
     @Override
     public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
-        return getCriteriaBuilder(getMetadata().getModifiers())
+        return ((FullQueryBuilder) getCriteriaBuilder(getMetadata().getModifiers()))
                 .page(keysetPage, firstResult, maxResults)
                 .getResultList();
     }
 
-    protected CriteriaBuilder<T> getCriteriaBuilder(@Nullable QueryModifiers modifiers) {
+    protected Queryable<T, ?> getCriteriaBuilder(@Nullable QueryModifiers modifiers) {
         BlazeCriteriaVisitor<T> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, getTemplates());
-        blazeCriteriaVisitor.serialize(getMetadata(), false, null);
+        blazeCriteriaVisitor.serialize(this);
         CriteriaBuilder<T> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
 
         if (modifiers != null) {
@@ -170,7 +172,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             criteriaBuilder.setCacheable(true);
         }
 
-        return criteriaBuilder;
+        return (Queryable) blazeCriteriaVisitor.getQueryable();
     }
 
     @Override
@@ -316,7 +318,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @param sq subqueries
      * @return union
      */
-    public <RT> Union<RT> union(SubQueryExpression<RT>... sq) {
+    public <RT> SetOperation<RT> union(SubQueryExpression<RT>... sq) {
         return union(Arrays.asList(sq));
     }
 
@@ -327,7 +329,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @param sq subqueries
      * @return union
      */
-    public <RT> Union<RT> union(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetOperation<RT> union(List<SubQueryExpression<RT>> sq) {
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");
@@ -335,7 +337,36 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         this.union = unionAll ? UnionUtils.unionAll(sq.toArray(new Expression[0])) :
                 UnionUtils.union(sq.toArray(new Expression[0]));
         this.firstUnionSubQuery = sq.get(0);
-        return new UnionImpl(this);
+        return new SetOperationImpl(this);
+    }
+
+    /**
+     * Creates an intersect expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> intersect(SubQueryExpression<RT>... sq) {
+        return intersect(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an intersect expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> intersect(List<SubQueryExpression<RT>> sq) {
+        queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
+        if (!queryMixin.getMetadata().getJoins().isEmpty()) {
+            throw new IllegalArgumentException("Don't mix union and from");
+        }
+        this.union = unionAll ? UnionUtils.intersectAll(sq.toArray(new Expression[0])) :
+                UnionUtils.intersect(sq.toArray(new Expression[0]));
+        this.firstUnionSubQuery = sq.get(0);
+        return new SetOperationImpl(this);
     }
 
     /**
@@ -345,7 +376,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @param sq subqueries
      * @return union
      */
-    public <RT> Union<RT> unionAll(SubQueryExpression<RT>... sq) {
+    public <RT> SetOperation<RT> unionAll(SubQueryExpression<RT>... sq) {
         unionAll = true;
         return union(sq);
     }
@@ -357,7 +388,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @param sq subqueries
      * @return union
      */
-    public <RT> Union<RT> unionAll(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq) {
         unionAll = true;
         return union(sq);
     }

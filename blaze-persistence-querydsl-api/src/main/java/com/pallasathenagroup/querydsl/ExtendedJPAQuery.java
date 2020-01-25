@@ -39,5 +39,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
 
     <P> Q fullJoin(MapExpression<?,P> target, Path<P> alias);
 
+    Q union();
+
 
 }

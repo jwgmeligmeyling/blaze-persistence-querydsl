@@ -36,8 +36,9 @@ public class BindBuilder<T, Q extends ExtendedJPAQuery<T, Q>>
         return new SelectBuilder<>(path);
     }
 
+    @Override
     public com.pallasathenagroup.querydsl.experimental.BindBuilder<T, Q> union() {
-        com.pallasathenagroup.querydsl.experimental.BindBuilder<T,Q> bindBuilder = new com.pallasathenagroup.querydsl.experimental.BindBuilder<>(mainQuery, alias, recursive);
+        BindBuilder<T,Q> bindBuilder = new com.pallasathenagroup.querydsl.experimental.BindBuilder<>(mainQuery, alias, recursive);
         bindBuilder.union = UnionUtils.union(this, bindBuilder);
         bindBuilder.firstUnionSubQuery = this;
         return bindBuilder;

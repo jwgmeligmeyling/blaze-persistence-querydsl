@@ -18,6 +18,7 @@ import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
+import com.blazebit.persistence.Queryable;
 import com.blazebit.persistence.SelectBaseCTECriteriaBuilder;
 import com.blazebit.persistence.SelectBuilder;
 import com.blazebit.persistence.SelectCTECriteriaBuilder;
@@ -28,6 +29,7 @@ import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
 import com.google.common.collect.ImmutableList;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.SetOperationImpl;
 import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
@@ -54,6 +56,7 @@ import com.querydsl.jpa.JPQLTemplates;
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -69,6 +72,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     private static final Logger logger = Logger.getLogger(BlazeCriteriaVisitor.class.getName());
 
     private CriteriaBuilder<T> criteriaBuilder;
+    private Queryable<T, ?> queryable;
     private CriteriaBuilderFactory criteriaBuilderFactory;
     private EntityManager entityManager;
     private Map<Object, String> constantToLabel = new IdentityHashMap<>();
@@ -117,6 +121,113 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             renderSingleSelect(select, criteriaBuilder);
         }
 
+    }
+
+    public void serialize(Expression<?> expression) {
+        Class<T> type = (Class<T>) expression.getType();
+        this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
+        this.queryable = (Queryable<T, ?>) serialize(this.criteriaBuilder, expression);
+    }
+
+    public <X extends SelectBuilder<?> & WhereBuilder<?> & FromBaseBuilder<?> & DistinctBuilder<?>
+            & GroupByBuilder<?> & OrderByBuilder<?> & ParameterHolder<?> & LimitBuilder<?> & SetOperationBuilder<?,?>> Object serialize(X criteriaBuilder, Expression<?> expression) {
+        Object result = expression.accept(new Visitor<Object, X>() {
+            @Override
+            public Object visit(Constant<?> constant, X criteriaBuilder) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Object visit(FactoryExpression<?> factoryExpression, X criteriaBuilder) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Object visit(Operation<?> setOperation, X criteriaBuilder) {
+                criteriaBuilder = (X) setOperation.getArg(0).accept(this, criteriaBuilder);
+                Object setBuilder = null;
+                boolean isNestedSet = setOperation.getArg(1) instanceof Operation<?> || setOperation.getArg(1) instanceof SetOperationImpl;
+                switch ((JPQLNextOps) setOperation.getOperator()) {
+                    case SET_UNION:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startUnion() : criteriaBuilder.union();
+                        break;
+                    case SET_UNION_ALL:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startUnionAll() : criteriaBuilder.unionAll();
+                        break;
+                    case SET_EXCEPT:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startExcept() : criteriaBuilder.except();
+                        break;
+                    case SET_EXCEPT_ALL:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startExceptAll() : criteriaBuilder.exceptAll();
+                        break;
+                    case SET_INTERSECT:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startIntersect() : criteriaBuilder.intersect();
+                        break;
+                    case SET_INTERSECT_ALL:
+                        setBuilder = isNestedSet ?
+                                criteriaBuilder.startIntersectAll() : criteriaBuilder.intersectAll();
+                        break;
+                }
+                setBuilder = setOperation.getArg(1).accept(this, (X) setBuilder);
+                if (isNestedSet) return ((BaseOngoingSetOperationBuilder<?, ?, ?>) setBuilder).endSet();
+                return setBuilder;
+            }
+
+            @Override
+            public Object visit(ParamExpression<?> paramExpression, X criteriaBuilder) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Object visit(Path<?> path, X criteriaBuilder) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Object visit(SubQueryExpression<?> subQuery, X criteriaBuilder) {
+                QueryMetadata subQueryMetadata = subQuery.getMetadata();
+
+                renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
+                renderDistinct(subQueryMetadata, criteriaBuilder);
+                renderWhere(subQueryMetadata, criteriaBuilder);
+                renderGroupBy(subQueryMetadata, criteriaBuilder);
+                renderHaving(subQueryMetadata, criteriaBuilder);
+                renderOrderBy(subQueryMetadata, criteriaBuilder);
+                renderParameters(subQueryMetadata, criteriaBuilder);
+                renderConstants(criteriaBuilder);
+                renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
+
+                Expression<?> select = subQueryMetadata.getProjection();
+                if (select instanceof FactoryExpression<?> && criteriaBuilder instanceof FullQueryBuilder<?, ?>) {
+                    FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
+                    FullQueryBuilder<?, ?> fullQueryBuilder = (FullQueryBuilder<?, ?>) criteriaBuilder;
+                    fullQueryBuilder.selectNew(new FactoryExpressionObjectBuilder(factoryExpression));
+                } else {
+                    List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
+                    for (Expression<?> selection : projection) {
+                        renderSingleSelect(selection, criteriaBuilder);
+                    }
+                }
+
+                return criteriaBuilder;
+            }
+
+            @Override
+            public Object visit(TemplateExpression<?> templateExpression, X criteriaBuilder) {
+                throw new UnsupportedOperationException();
+            }
+        }, criteriaBuilder);
+
+        if (result instanceof BaseOngoingSetOperationBuilder) {
+            result = ((BaseOngoingSetOperationBuilder<?, ?, ?>) result).endSet();
+        }
+
+        return result;
     }
 
     private void renderModifiers(QueryModifiers modifiers, LimitBuilder<?> criteriaBuilder) {
@@ -190,10 +301,13 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
             if (target instanceof ValuesExpression<?>) {
                 ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
+                Class type = valuesExpression.getType();
+                String name = valuesExpression.getMetadata().getName();
+                Collection<?> elements = valuesExpression.getElements();
                 if ( valuesExpression.isIdentifiable() ) {
-                    criteriaBuilder = (X) fromBuilder.fromIdentifiableValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) fromBuilder.fromIdentifiableValues(type, name, elements);
                 } else {
-                    criteriaBuilder = (X) fromBuilder.fromValues((Class) valuesExpression.getType(), valuesExpression.getMetadata().getName(), valuesExpression.getElements());
+                    criteriaBuilder = (X) fromBuilder.fromValues(type, name, elements);
                 }
             }
             else if (target instanceof Path<?>) {
@@ -581,6 +695,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     public CriteriaBuilder<T> getCriteriaBuilder() {
         return criteriaBuilder;
+    }
+
+    public Queryable<T, ?> getQueryable() {
+        return queryable;
     }
 
     private class FactoryExpressionObjectBuilder implements ObjectBuilder<T> {

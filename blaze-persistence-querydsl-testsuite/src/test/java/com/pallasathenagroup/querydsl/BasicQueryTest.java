@@ -202,6 +202,120 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
+    public void testSimpleUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+            entityManager.merge(theBook);
+
+            Book theSequel = new Book();
+            theSequel.id = 42l;
+            theSequel.name = "test2";
+            entityManager.merge(theSequel);
+        });
+
+
+        doInJPA(this::sessionFactory, entityManager -> {
+
+
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .from(book)
+                    .select(book)
+                    .where(book.id.eq(1337l))
+                    .union()
+                    .from(book)
+                    .select(book)
+                    .where(book.id.eq(42l))
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+    @Test
+    public void testSimpleSubqueryUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+            entityManager.merge(theBook);
+
+            Book theSequel = new Book();
+            theSequel.id = 42l;
+            theSequel.name = "test2";
+            entityManager.merge(theSequel);
+        });
+
+
+        doInJPA(this::sessionFactory, entityManager -> {
+
+
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .union(select(book).from(book).where(book.id.eq(1337l)), select(book).from(book).where(book.id.eq(42l)))
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testComplexSubqueryUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+            entityManager.merge(theBook);
+
+            Book theSequel = new Book();
+            theSequel.id = 42l;
+            theSequel.name = "test2";
+            entityManager.merge(theSequel);
+        });
+
+
+//        doInJPA(this::sessionFactory, entityManager -> {
+//
+//
+//            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+//                    .union(select(book).from(book).where(book.id.eq(1337l)), select(book).from(book).where(book.id.eq(42l)), select(book).from(book).where(book.id.eq(41l)))
+//                    .fetch();
+//
+//            System.out.println(fetch);
+//        });
+        doInJPA(this::sessionFactory, entityManager -> {
+
+
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+                    .union(select(book).from(book).where(book.id.eq(1337l)),
+                        new BlazeJPAQuery<TestEntity>(null, null).intersect(
+                                select(book).from(book).where(book.id.eq(41l)),
+                                new BlazeJPAQuery<TestEntity>(null, null).union(
+                                        select(book).from(book).where(book.id.eq(42l)),
+                                        select(book).from(book).where(book.id.eq(43l))
+                                )
+                                ),
+                                select(book).from(book).where(book.id.eq(46l))
+                            )
+                    .fetch();
+
+            System.out.println(fetch);
+//
+//            criteriaBuilderFactory.create(entityManager, Book.class)
+//                    .from(Book.class, "book").where("book.id").eq(1337l)
+//                    .startUnion()
+//                    .from(Book.class, "book").where("book.id").eq(1336l)
+//                    .intersect()
+//                    .from(Book.class, "book").where("book.id").eq(1339l)
+//                    .endSet()
+//                    .endSet()
+//                    .getResultList();
+        });
+    }
+
+    @Test
     public void testCTE() {
         doInJPA(this::sessionFactory, entityManager -> {
 
