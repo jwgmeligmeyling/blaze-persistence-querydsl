@@ -3,7 +3,7 @@ package com.pallasathenagroup.querydsl.experimental;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.ExtendedJPAQuery;
-import com.pallasathenagroup.querydsl.UnionUtils;
+import com.pallasathenagroup.querydsl.SetUtils;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.Path;
@@ -39,8 +39,7 @@ public class BindBuilder<T, Q extends ExtendedJPAQuery<T, Q>>
     @Override
     public com.pallasathenagroup.querydsl.experimental.BindBuilder<T, Q> union() {
         BindBuilder<T,Q> bindBuilder = new com.pallasathenagroup.querydsl.experimental.BindBuilder<>(mainQuery, alias, recursive);
-        bindBuilder.union = UnionUtils.union(this, bindBuilder);
-        bindBuilder.firstUnionSubQuery = this;
+        bindBuilder.union = SetUtils.union(this, bindBuilder);
         return bindBuilder;
     }
 

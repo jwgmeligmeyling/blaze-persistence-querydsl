@@ -62,7 +62,7 @@ public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>>
     public BlazeJPAQuery<T> union() {
         BlazeJPAQuery<T> query = new BlazeJPAQuery<>(entityManager, getTemplates(), getMetadata(), criteriaBuilderFactory);
         query.cachable = this.cachable;
-        query.union = UnionUtils.union(this, query);
+        query.union = SetUtils.union(this, query);
         return query;
     }
 

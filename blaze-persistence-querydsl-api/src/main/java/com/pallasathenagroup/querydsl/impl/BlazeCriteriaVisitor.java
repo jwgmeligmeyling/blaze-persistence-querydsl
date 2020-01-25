@@ -94,16 +94,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
 
 
-        for (QueryFlag queryFlag : metadata.getFlags()) {
-            Expression<?> flag = queryFlag.getFlag();
-            Position position = queryFlag.getPosition();
-            switch (position) {
-                case WITH:
-                    flag.accept(this, null);
-                    break;
-            }
-        }
-
+        renderCTEs(metadata);
         renderJoins(metadata, criteriaBuilder);
         renderDistinct(metadata, criteriaBuilder);
         renderWhere(metadata, criteriaBuilder);
@@ -192,6 +183,8 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             public Object visit(SubQueryExpression<?> subQuery, X criteriaBuilder) {
                 QueryMetadata subQueryMetadata = subQuery.getMetadata();
 
+                renderCTEs(subQueryMetadata);
+
                 renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
                 renderDistinct(subQueryMetadata, criteriaBuilder);
                 renderWhere(subQueryMetadata, criteriaBuilder);
@@ -228,6 +221,18 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         }
 
         return result;
+    }
+
+    private void renderCTEs(QueryMetadata subQueryMetadata) {
+        for (QueryFlag queryFlag : subQueryMetadata.getFlags()) {
+            Expression<?> flag = queryFlag.getFlag();
+            Position position = queryFlag.getPosition();
+            switch (position) {
+                case WITH:
+                    flag.accept(BlazeCriteriaVisitor.this, null);
+                    break;
+            }
+        }
     }
 
     private void renderModifiers(QueryModifiers modifiers, LimitBuilder<?> criteriaBuilder) {

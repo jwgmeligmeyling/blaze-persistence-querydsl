@@ -6,9 +6,6 @@ import com.mysema.commons.lang.CloseableIterator;
 import com.querydsl.core.NonUniqueResultException;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryResults;
-import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Operation;
-import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Visitor;
 
 import javax.annotation.Nullable;
@@ -70,27 +67,12 @@ public class SetOperationImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implemen
     @Nullable
     @Override
     public <R, C> R accept(Visitor<R, C> v, @Nullable C context) {
-        return v.visit((Operation<T>) this, context);
+        return query.accept(v, context);
     }
 
     @Override
     public Class<? extends T> getType() {
         return query.getType();
-    }
-
-    @Override
-    public Expression<?> getArg(int i) {
-        return ((Operation<?>) query.union).getArg(i);
-    }
-
-    @Override
-    public List<Expression<?>> getArgs() {
-        return ((Operation<?>) query.union).getArgs();
-    }
-
-    @Override
-    public JPQLNextOps getOperator() {
-        return (JPQLNextOps) ((Operation<?>) query.union).getOperator();
     }
 
 }

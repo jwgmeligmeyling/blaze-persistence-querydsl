@@ -23,8 +23,8 @@ import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
-import static com.pallasathenagroup.querydsl.UnionUtils.intersect;
-import static com.pallasathenagroup.querydsl.UnionUtils.union;
+import static com.pallasathenagroup.querydsl.SetUtils.intersect;
+import static com.pallasathenagroup.querydsl.SetUtils.union;
 import static com.pallasathenagroup.querydsl.WindowExpressions.lastValue;
 import static com.pallasathenagroup.querydsl.WindowExpressions.rowNumber;
 import static com.querydsl.jpa.JPAExpressions.select;
@@ -292,7 +292,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
                     .union(select(book).from(book).where(book.id.eq(1337l)),
                         new BlazeJPAQuery<TestEntity>(null, null).intersect(
                                 select(book).from(book).where(book.id.eq(41l)),
-                                new BlazeJPAQuery<TestEntity>(null, null).union(
+                                new BlazeJPAQuery<TestEntity>(null, null).except(
                                         select(book).from(book).where(book.id.eq(42l)),
                                         select(book).from(book).where(book.id.eq(43l))
                                 )

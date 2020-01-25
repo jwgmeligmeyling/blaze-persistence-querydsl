@@ -41,10 +41,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     @Nullable
     protected Expression<?> union;
 
-    protected SubQueryExpression<?> firstUnionSubQuery;
-
-    protected boolean unionAll;
-
     protected boolean cachable = false;
 
     public AbstractBlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
@@ -180,8 +176,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         super.clone(query);
         this.cachable = query.cachable;
         this.union = query.union;
-        this.unionAll = query.unionAll;
-        this.firstUnionSubQuery = query.firstUnionSubQuery;
     }
 
     // Work around private access to query(...)
@@ -311,6 +305,15 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     // Union stuff
 
+    private <RT> SetOperation<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
+        queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
+        if (!queryMixin.getMetadata().getJoins().isEmpty()) {
+            throw new IllegalArgumentException("Don't mix union and from");
+        }
+        this.union = SetUtils.setOperation(operator, sq.toArray(new Expression[0]));
+        return new SetOperationImpl(this);
+    }
+
     /**
      * Creates an union expression for the given subqueries
      *
@@ -330,14 +333,29 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @return union
      */
     public <RT> SetOperation<RT> union(List<SubQueryExpression<RT>> sq) {
-        queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
-        if (!queryMixin.getMetadata().getJoins().isEmpty()) {
-            throw new IllegalArgumentException("Don't mix union and from");
-        }
-        this.union = unionAll ? UnionUtils.unionAll(sq.toArray(new Expression[0])) :
-                UnionUtils.union(sq.toArray(new Expression[0]));
-        this.firstUnionSubQuery = sq.get(0);
-        return new SetOperationImpl(this);
+        return setOperation(JPQLNextOps.SET_UNION, sq);
+    }
+
+    /**
+     * Creates an union expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> unionAll(SubQueryExpression<RT>... sq) {
+        return unionAll(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an union expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq) {
+        return setOperation(JPQLNextOps.SET_UNION_ALL, sq);
     }
 
     /**
@@ -359,38 +377,74 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @return union
      */
     public <RT> SetOperation<RT> intersect(List<SubQueryExpression<RT>> sq) {
-        queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
-        if (!queryMixin.getMetadata().getJoins().isEmpty()) {
-            throw new IllegalArgumentException("Don't mix union and from");
-        }
-        this.union = unionAll ? UnionUtils.intersectAll(sq.toArray(new Expression[0])) :
-                UnionUtils.intersect(sq.toArray(new Expression[0]));
-        this.firstUnionSubQuery = sq.get(0);
-        return new SetOperationImpl(this);
+        return setOperation(JPQLNextOps.SET_INTERSECT, sq);
     }
 
     /**
-     * Creates an union expression for the given subqueries
+     * Creates an intersect expression for the given subqueries
      *
      * @param <RT>
      * @param sq subqueries
      * @return union
      */
-    public <RT> SetOperation<RT> unionAll(SubQueryExpression<RT>... sq) {
-        unionAll = true;
-        return union(sq);
+    public <RT> SetOperation<RT> intersectAll(SubQueryExpression<RT>... sq) {
+        return intersectAll(Arrays.asList(sq));
     }
 
     /**
-     * Creates an union expression for the given subqueries
+     * Creates an intersect expression for the given subqueries
      *
      * @param <RT>
      * @param sq subqueries
      * @return union
      */
-    public <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq) {
-        unionAll = true;
-        return union(sq);
+    public <RT> SetOperation<RT> intersectAll(List<SubQueryExpression<RT>> sq) {
+        return setOperation(JPQLNextOps.SET_INTERSECT_ALL, sq);
+    }
+
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> except(SubQueryExpression<RT>... sq) {
+        return except(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> except(List<SubQueryExpression<RT>> sq) {
+        return setOperation(JPQLNextOps.SET_EXCEPT, sq);
+    }
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> exceptAll(SubQueryExpression<RT>... sq) {
+        return exceptAll(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT>
+     * @param sq subqueries
+     * @return union
+     */
+    public <RT> SetOperation<RT> exceptAll(List<SubQueryExpression<RT>> sq) {
+        return setOperation(JPQLNextOps.SET_EXCEPT_ALL, sq);
     }
 
     public CriteriaBuilderFactory getCriteriaBuilderFactory() {
