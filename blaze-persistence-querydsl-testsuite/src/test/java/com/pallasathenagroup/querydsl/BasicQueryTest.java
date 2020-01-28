@@ -13,6 +13,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -202,7 +203,8 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
-    public void testSimpleUnion() {
+    @Ignore
+    public void testFluentUnion() {
         doInJPA(this::sessionFactory, entityManager -> {
 
             Book theBook = new Book();
@@ -234,7 +236,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
     }
     @Test
-    public void testSimpleSubqueryUnion() {
+    public void testSimpleUnion() {
         doInJPA(this::sessionFactory, entityManager -> {
 
             Book theBook = new Book();
@@ -261,7 +263,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
-    public void testComplexSubqueryUnion() {
+    public void testComplexUnion() {
         doInJPA(this::sessionFactory, entityManager -> {
 
             Book theBook = new Book();
@@ -287,6 +289,52 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
                                         select(book).from(book).where(book.id.eq(43l)))),
                                 select(book).from(book).where(book.id.eq(46l))
                             )
+                    .fetch();
+
+            System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testComplexSubqueryUnion() {
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            Book theBook = new Book();
+            theBook.id = 1337l;
+            theBook.name = "test";
+            entityManager.merge(theBook);
+
+            Book theSequel = new Book();
+            theSequel.id = 42l;
+            theSequel.name = "test2";
+            entityManager.merge(theSequel);
+        });
+
+        doInJPA(this::sessionFactory, entityManager -> {
+
+            criteriaBuilderFactory.create(entityManager, Book.class)
+                    .from(Book.class)
+                    .where("book.name").in().from(Book.class, "b")
+                        .select("b.name")
+                        .union()
+                        .endSet()
+                        .end();
+
+            SetOperation<Long> union = new BlazeJPAQuery<Long>(entityManager, criteriaBuilderFactory)
+                    .union(select(book.id).from(book).where(book.id.eq(1337l)),
+                            new BlazeJPAQuery<Long>().intersect(
+                                    select(book.id).from(book).where(book.id.eq(41l)),
+                                    new BlazeJPAQuery<Long>().except(
+                                            select(book.id).from(book).where(book.id.eq(42l)),
+                                            select(book.id).from(book).where(book.id.eq(43l)))),
+                            select(book.id).from(book).where(book.id.eq(46l))
+                    );
+
+            QBook book2 = new QBook("secondBook");
+
+            List<Book> fetch = new BlazeJPAQuery<Book>(entityManager, criteriaBuilderFactory)
+                    .select(book2)
+                    .from(book2).where(book2.id.in(union))
                     .fetch();
 
             System.out.println(fetch);

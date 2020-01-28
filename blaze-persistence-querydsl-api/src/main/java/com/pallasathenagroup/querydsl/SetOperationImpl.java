@@ -1,16 +1,11 @@
 package com.pallasathenagroup.querydsl;
 
-import com.blazebit.persistence.CriteriaBuilder;
-import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
 import com.mysema.commons.lang.CloseableIterator;
 import com.querydsl.core.NonUniqueResultException;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryResults;
-import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Operation;
-import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Visitor;
 
 import javax.annotation.Nullable;

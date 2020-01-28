@@ -5,6 +5,7 @@ import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.DistinctBuilder;
 import com.blazebit.persistence.FinalSetOperationCTECriteriaBuilder;
+import com.blazebit.persistence.FinalSetOperationSubqueryBuilder;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
 import com.blazebit.persistence.FullQueryBuilder;
@@ -61,6 +62,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -76,7 +78,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     private CriteriaBuilderFactory criteriaBuilderFactory;
     private EntityManager entityManager;
     private Map<Object, String> constantToLabel = new IdentityHashMap<>();
-    private Map<QueryMetadata, String> subQueryToLabel = new IdentityHashMap<>();
+    private Map<Expression<?>, String> subQueryToLabel = new IdentityHashMap<>();
     private JPQLTemplates templates;
 
     public BlazeCriteriaVisitor(CriteriaBuilderFactory criteriaBuilderFactory, EntityManager entityManager, JPQLTemplates templates) {
@@ -117,83 +119,83 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     public void serialize(Expression<?> expression) {
         Class<T> type = (Class<T>) expression.getType();
         this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
-        this.queryable = (Queryable<T, ?>) serialize(this.criteriaBuilder, expression);
+        this.queryable = (Queryable<T, ?>) serializeSubQuery(this.criteriaBuilder, expression);
     }
 
-    public <X extends SelectBuilder<?> & WhereBuilder<?> & FromBaseBuilder<?> & DistinctBuilder<?>
-            & GroupByBuilder<?> & OrderByBuilder<?> & ParameterHolder<?> & LimitBuilder<?> & SetOperationBuilder<?,?>> Object serialize(X criteriaBuilder, Expression<?> expression) {
-        Object result = expression.accept(new Visitor<Object, X>() {
+    public Object serializeSubQuery(Object criteriaBuilder, Expression<?> expression) {
+        Object result = expression.accept(new Visitor<Object, Object>() {
             @Override
-            public Object visit(Constant<?> constant, X criteriaBuilder) {
+            public Object visit(Constant<?> constant, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public Object visit(FactoryExpression<?> factoryExpression, X criteriaBuilder) {
+            public Object visit(FactoryExpression<?> factoryExpression, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public Object visit(Operation<?> setOperation, X criteriaBuilder) {
-                criteriaBuilder = (X) setOperation.getArg(0).accept(this, criteriaBuilder);
+            public Object visit(Operation<?> setOperation, Object criteriaBuilder) {
+                criteriaBuilder = setOperation.getArg(0).accept(this, criteriaBuilder);
+                SetOperationBuilder<?,?> setOperationBuilder = (SetOperationBuilder<?,?>) criteriaBuilder;
                 Object setBuilder = null;
                 boolean isNestedSet = setOperation.getArg(1) instanceof Operation<?> || setOperation.getArg(1) instanceof SetOperationImpl;
                 switch ((JPQLNextOps) setOperation.getOperator()) {
                     case SET_UNION:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startUnion() : criteriaBuilder.union();
+                                setOperationBuilder.startUnion() : setOperationBuilder.union();
                         break;
                     case SET_UNION_ALL:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startUnionAll() : criteriaBuilder.unionAll();
+                                setOperationBuilder.startUnionAll() : setOperationBuilder.unionAll();
                         break;
                     case SET_EXCEPT:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startExcept() : criteriaBuilder.except();
+                                setOperationBuilder.startExcept() : setOperationBuilder.except();
                         break;
                     case SET_EXCEPT_ALL:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startExceptAll() : criteriaBuilder.exceptAll();
+                                setOperationBuilder.startExceptAll() : setOperationBuilder.exceptAll();
                         break;
                     case SET_INTERSECT:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startIntersect() : criteriaBuilder.intersect();
+                                setOperationBuilder.startIntersect() : setOperationBuilder.intersect();
                         break;
                     case SET_INTERSECT_ALL:
                         setBuilder = isNestedSet ?
-                                criteriaBuilder.startIntersectAll() : criteriaBuilder.intersectAll();
+                                setOperationBuilder.startIntersectAll() : setOperationBuilder.intersectAll();
                         break;
                 }
-                setBuilder = setOperation.getArg(1).accept(this, (X) setBuilder);
+                setBuilder = setOperation.getArg(1).accept(this, setBuilder);
                 if (isNestedSet) return ((BaseOngoingSetOperationBuilder<?, ?, ?>) setBuilder).endSet();
                 return setBuilder;
             }
 
             @Override
-            public Object visit(ParamExpression<?> paramExpression, X criteriaBuilder) {
+            public Object visit(ParamExpression<?> paramExpression, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public Object visit(Path<?> path, X criteriaBuilder) {
+            public Object visit(Path<?> path, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public Object visit(SubQueryExpression<?> subQuery, X criteriaBuilder) {
+            public Object visit(SubQueryExpression<?> subQuery, Object criteriaBuilder) {
                 QueryMetadata subQueryMetadata = subQuery.getMetadata();
 
                 renderCTEs(subQueryMetadata);
 
-                renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
-                renderDistinct(subQueryMetadata, criteriaBuilder);
-                renderWhere(subQueryMetadata, criteriaBuilder);
-                renderGroupBy(subQueryMetadata, criteriaBuilder);
-                renderHaving(subQueryMetadata, criteriaBuilder);
-                renderOrderBy(subQueryMetadata, criteriaBuilder);
-                renderParameters(subQueryMetadata, criteriaBuilder);
-                renderConstants(criteriaBuilder);
-                renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
+                criteriaBuilder = renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
+                renderDistinct(subQueryMetadata, (DistinctBuilder<?>) criteriaBuilder);
+                renderWhere(subQueryMetadata, (WhereBuilder<?>) criteriaBuilder);
+                renderGroupBy(subQueryMetadata, (GroupByBuilder<?>) criteriaBuilder);
+                renderHaving(subQueryMetadata, (HavingBuilder<?>) criteriaBuilder);
+                renderOrderBy(subQueryMetadata, (OrderByBuilder<?>) criteriaBuilder);
+                renderParameters(subQueryMetadata, (ParameterHolder<?>) criteriaBuilder);
+                renderConstants((ParameterHolder<?>) criteriaBuilder);
+                renderModifiers(subQueryMetadata.getModifiers(), (LimitBuilder<?>) criteriaBuilder);
 
                 Expression<?> select = subQueryMetadata.getProjection();
                 if (select instanceof FactoryExpression<?> && criteriaBuilder instanceof FullQueryBuilder<?, ?>) {
@@ -203,7 +205,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 } else {
                     List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
                     for (Expression<?> selection : projection) {
-                        renderSingleSelect(selection, criteriaBuilder);
+                        renderSingleSelect(selection, (SelectBuilder<?>) criteriaBuilder);
                     }
                 }
 
@@ -211,7 +213,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             }
 
             @Override
-            public Object visit(TemplateExpression<?> templateExpression, X criteriaBuilder) {
+            public Object visit(TemplateExpression<?> templateExpression, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
             }
         }, criteriaBuilder);
@@ -222,6 +224,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
         return result;
     }
+
 
     private void renderCTEs(QueryMetadata subQueryMetadata) {
         for (QueryFlag queryFlag : subQueryMetadata.getFlags()) {
@@ -362,27 +365,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         return criteriaBuilder;
     }
 
-    private void serializeSubQuery(QueryMetadata metadata) {
-        SubqueryInitiator<?> subqueryInitiator = getSubqueryInitiator();
-        QueryModifiers modifiers = metadata.getModifiers();
-        Expression<?> select = metadata.getProjection();
-
-        SubqueryBuilder criteriaBuilder = renderJoins(metadata, subqueryInitiator);
-        renderDistinct(metadata, criteriaBuilder);
-        renderWhere(metadata, criteriaBuilder);
-        renderGroupBy(metadata, criteriaBuilder);
-        renderHaving(metadata, criteriaBuilder);
-        renderOrderBy(metadata, criteriaBuilder);
-        renderParameters(metadata, criteriaBuilder);
-        renderModifiers(modifiers, criteriaBuilder);
-
-        for (Expression<?> arg : expandProjection(select)) {
-            renderSingleSelect(arg, criteriaBuilder);
-        }
-
-        criteriaBuilder.end();
-    }
-
     private List<? extends Expression<?>> expandProjection(Expression<?> expr) {
         if (expr instanceof FactoryExpression) {
             return ((FactoryExpression<?>) expr).getArgs();
@@ -475,8 +457,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     @Override
     public Void visit(SubQueryExpression<?> query, Void context) {
-        append(subQueryToLabel.computeIfAbsent(query.getMetadata(), o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
+        renderSubQueryExpression(query);
         return null;
+    }
+
+    private void renderSubQueryExpression(Expression<?> query) {
+        append(subQueryToLabel.computeIfAbsent(query, o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
     }
 
     private final List<SubqueryInitiator<?>> subqueryInitiatorStack = new ArrayList<SubqueryInitiator<?>>();;
@@ -493,8 +479,8 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         subqueryInitiatorStack.remove(subqueryInitiatorStack.size() - 1);
     }
 
-    private Map<QueryMetadata, String> takeSubQueryToLabelMap() {
-        Map<QueryMetadata, String> subQueryToLabel = this.subQueryToLabel;
+    private Map<Expression<?>, String> takeSubQueryToLabelMap() {
+        Map<Expression<?>, String> subQueryToLabel = this.subQueryToLabel;
         if (subQueryToLabel.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -575,14 +561,22 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private <X> X setExpressionSubqueries(Expression<?> expression, Function<String, ? extends X> setExpression, Function<String, MultipleSubqueryInitiator<? extends X>> setExpressionSubqueries) {
         String expressionString = renderExpression(expression);
-        Map<QueryMetadata, String> subQueryToLabel = takeSubQueryToLabelMap();
+        Map<Expression<?>, String> subQueryToLabel = takeSubQueryToLabelMap();
         if (subQueryToLabel.isEmpty()) {
             return setExpression.apply(expressionString);
         } else {
             MultipleSubqueryInitiator<? extends X> subqueryInitiator = setExpressionSubqueries.apply(expressionString);
-            for (Map.Entry<QueryMetadata, String> entry : subQueryToLabel.entrySet()) {
-                pushSubqueryInitiator(subqueryInitiator.with(entry.getValue()));
-                serializeSubQuery(entry.getKey());
+            for (Map.Entry<Expression<?>, String> entry : subQueryToLabel.entrySet()) {
+                SubqueryInitiator<?> initiator = subqueryInitiator.with(entry.getValue());
+                pushSubqueryInitiator(initiator);
+                Object o = serializeSubQuery(initiator, entry.getKey());
+
+                if (o instanceof SubqueryBuilder) {
+                    ((SubqueryBuilder<?>) o).end();
+                } else if (o instanceof FinalSetOperationSubqueryBuilder) {
+                    ((FinalSetOperationSubqueryBuilder<?>) o).end();
+                }
+
                 popSubqueryInitiator();
             }
             return subqueryInitiator.end();
@@ -601,7 +595,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                         Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
                         SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
                         SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
-                            renderCTEQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
+                                renderCTEQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
                         SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
                                 baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
                         subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
@@ -614,8 +608,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                         if (result instanceof FinalSetOperationCTECriteriaBuilder) {
                             ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
-                        }
-                        else if (result instanceof FullSelectCTECriteriaBuilder) {
+                        } else if (result instanceof FullSelectCTECriteriaBuilder) {
                             ((FullSelectCTECriteriaBuilder<?>) result).end();
                         }
                     }
@@ -626,10 +619,41 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     cteEntityPath = (EntityPath<?>) args.get(0);
                     cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
                     return;
+
+//                case SET_UNION:
+//                case SET_UNION_ALL:
+//                case SET_INTERSECT:
+//                case SET_INTERSECT_ALL:
+//                case SET_EXCEPT:
+//                case SET_EXCEPT_ALL:
+//                    return;
             }
         }
 
-        super.visitOperation(type, operator, args);
+        try {
+            super.visitOperation(type, operator, args);
+        }catch (Exception e) {
+            throw e;
+        }
+    }
+
+    @Override
+    public Void visit(Operation<?> expr, Void context) {
+        if (expr.getOperator() instanceof JPQLNextOps) {
+            switch ((JPQLNextOps) expr.getOperator()) {
+                case SET_UNION:
+                case SET_UNION_ALL:
+                case SET_INTERSECT:
+                case SET_INTERSECT_ALL:
+                case SET_EXCEPT:
+                case SET_EXCEPT_ALL:
+                    renderSubQueryExpression(expr);
+                    return null;
+
+            }
+        }
+
+        return super.visit(expr, context);
     }
 
     private static String relativePathString(Path<?> root, Path<?> path) {
