@@ -62,7 +62,6 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -202,10 +201,23 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
                     FullQueryBuilder<?, ?> fullQueryBuilder = (FullQueryBuilder<?, ?>) criteriaBuilder;
                     fullQueryBuilder.selectNew(new FactoryExpressionObjectBuilder(factoryExpression));
+
                 } else {
                     List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
-                    for (Expression<?> selection : projection) {
-                        renderSingleSelect(selection, (SelectBuilder<?>) criteriaBuilder);
+
+                    if (criteriaBuilder instanceof SelectBaseCTECriteriaBuilder) {
+                        for (int i = 0; i < cteAliases.size(); i++) {
+                            Path<?> alias = cteAliases.get(i);
+                            String aliasString = relativePathString(cteEntityPath, alias);
+                            Expression<?> projExpression = projection.get(i);
+
+                            SelectBuilder<?> bindBuilder = ((SelectBaseCTECriteriaBuilder<?>) criteriaBuilder).bind(aliasString);
+                            setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
+                        }
+                    } else {
+                        for (Expression<?> selection : projection) {
+                            renderSingleSelect(selection, (SelectBuilder<?>) criteriaBuilder);
+                        }
                     }
                 }
 
@@ -492,73 +504,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     private List<Path<?>> cteAliases;
     private boolean recursive;
 
-    private <X extends SelectBaseCTECriteriaBuilder<?> & SetOperationBuilder<?, ?>> Object renderWithQuery(X criteriaBuilder, Expression<?> expression) {
-        if (expression instanceof Operation<?>) {
-            Operation<?> setOperation = (Operation<?>) expression;
-            renderWithQuery(criteriaBuilder, setOperation.getArg(0));
-            Object setBuilder = null;
-            switch ((JPQLNextOps) setOperation.getOperator()) {
-                case SET_UNION:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startUnion() : criteriaBuilder.union();
-                    break;
-                case SET_UNION_ALL:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startUnionAll() : criteriaBuilder.unionAll();
-                    break;
-                case SET_EXCEPT:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startExcept() : criteriaBuilder.except();
-                    break;
-                case SET_EXCEPT_ALL:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startExceptAll() : criteriaBuilder.exceptAll();
-                    break;
-                case SET_INTERSECT:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startIntersect() : criteriaBuilder.intersect();
-                    break;
-                case SET_INTERSECT_ALL:
-                    setBuilder = setOperation.getArg(1) instanceof Operation<?> ?
-                            criteriaBuilder.startIntersectAll() : criteriaBuilder.intersectAll();
-                    break;
-            }
-            setBuilder = renderWithQuery((X) setBuilder, setOperation.getArg(1));
-            return ((BaseOngoingSetOperationBuilder<?, ?, ?>) setBuilder).endSet();
-        }
-        else {
-            SubQueryExpression<?> subQuery = (SubQueryExpression<?>) expression;
-            renderCTEQuery(criteriaBuilder, subQuery);
-        }
-        return criteriaBuilder;
-    }
-
-    private <X extends SelectBaseCTECriteriaBuilder<?>> X renderCTEQuery(X criteriaBuilder, SubQueryExpression<?> subQuery) {
-        QueryMetadata subQueryMetadata = subQuery.getMetadata();
-
-        renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
-        renderDistinct(subQueryMetadata, criteriaBuilder);
-        renderWhere(subQueryMetadata, criteriaBuilder);
-        renderGroupBy(subQueryMetadata, criteriaBuilder);
-        renderHaving(subQueryMetadata, criteriaBuilder);
-        renderOrderBy(subQueryMetadata, criteriaBuilder);
-        renderParameters(subQueryMetadata, criteriaBuilder);
-        renderModifiers(subQueryMetadata.getModifiers(), criteriaBuilder);
-
-        List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
-
-        for (int i = 0; i < cteAliases.size(); i++) {
-            Path<?> alias = cteAliases.get(i);
-            String aliasString = relativePathString(cteEntityPath, alias);
-            Expression<?> projExpression = projection.get(i);
-
-            SelectBuilder<?> bindBuilder = criteriaBuilder.bind(aliasString);
-            setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
-        }
-
-        return criteriaBuilder;
-    }
-
     private <X> X setExpressionSubqueries(Expression<?> expression, Function<String, ? extends X> setExpression, Function<String, MultipleSubqueryInitiator<? extends X>> setExpressionSubqueries) {
         String expressionString = renderExpression(expression);
         Map<Expression<?>, String> subQueryToLabel = takeSubQueryToLabelMap();
@@ -595,16 +540,17 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                         Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
                         SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
                         SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
-                                renderCTEQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
+                                (SelectRecursiveCTECriteriaBuilder<?>)
+                                        serializeSubQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
                         SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
                                 baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
                         subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
-                        renderCTEQuery(recursiveCriteriaBuilder, subQuery).end();
+                        ((SelectCTECriteriaBuilder<?>) serializeSubQuery(recursiveCriteriaBuilder, subQuery)).end();
                     } else {
                         FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
 
                         Expression<?> subQueryExpression = args.get(1);
-                        Object result = renderWithQuery(cteBuilder, subQueryExpression);
+                        Object result = serializeSubQuery(cteBuilder, subQueryExpression);
 
                         if (result instanceof FinalSetOperationCTECriteriaBuilder) {
                             ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
@@ -619,22 +565,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     cteEntityPath = (EntityPath<?>) args.get(0);
                     cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
                     return;
-
-//                case SET_UNION:
-//                case SET_UNION_ALL:
-//                case SET_INTERSECT:
-//                case SET_INTERSECT_ALL:
-//                case SET_EXCEPT:
-//                case SET_EXCEPT_ALL:
-//                    return;
             }
         }
 
-        try {
-            super.visitOperation(type, operator, args);
-        }catch (Exception e) {
-            throw e;
-        }
+        super.visitOperation(type, operator, args);
     }
 
     @Override

@@ -419,6 +419,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
 
     @Test
+    @Ignore
     public void testRecursiveBindBuilder() {
         doInJPA(this::sessionFactory, entityManager -> {
 
