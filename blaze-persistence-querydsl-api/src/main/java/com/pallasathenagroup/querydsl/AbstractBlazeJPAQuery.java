@@ -116,6 +116,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         }
 
         String queryString = criteriaBuilder.getQueryString();
+        System.out.println(queryString);
         TypedQuery<T> query = criteriaBuilder.getQuery();
 
         if (lockMode != null) {

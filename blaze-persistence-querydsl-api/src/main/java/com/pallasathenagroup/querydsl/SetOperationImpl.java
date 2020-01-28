@@ -6,6 +6,7 @@ import com.mysema.commons.lang.CloseableIterator;
 import com.querydsl.core.NonUniqueResultException;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Visitor;
 
 import javax.annotation.Nullable;
@@ -75,4 +76,21 @@ public class SetOperationImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implemen
         return query.getType();
     }
 
+    @Override
+    public SetOperation<T> limit(long limit) {
+        query.limit(limit);
+        return this;
+    }
+
+    @Override
+    public SetOperation<T> offset(long offset) {
+        query.offset(offset);
+        return this;
+    }
+
+    @Override
+    public SetOperation<T> orderBy(OrderSpecifier<?>... o) {
+        query.orderBy(o);
+        return this;
+    }
 }

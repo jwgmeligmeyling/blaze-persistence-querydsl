@@ -5,6 +5,7 @@ import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.DistinctBuilder;
 import com.blazebit.persistence.FinalSetOperationCTECriteriaBuilder;
+import com.blazebit.persistence.FinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.FinalSetOperationSubqueryBuilder;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
@@ -29,6 +30,7 @@ import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
 import com.google.common.collect.ImmutableList;
+import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.SetOperationImpl;
 import com.pallasathenagroup.querydsl.ValuesExpression;
@@ -232,6 +234,15 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
         if (result instanceof BaseOngoingSetOperationBuilder) {
             result = ((BaseOngoingSetOperationBuilder<?, ?, ?>) result).endSet();
+        }
+
+        if ((result instanceof FinalSetOperationCriteriaBuilder ||
+            result instanceof FinalSetOperationCTECriteriaBuilder ||
+            result instanceof FinalSetOperationSubqueryBuilder) &&
+            expression instanceof SubQueryExpression<?>) {
+            QueryMetadata metadata = ((SubQueryExpression<?>) expression).getMetadata();
+            renderOrderBy(metadata, (OrderByBuilder<?>) result);
+            renderModifiers(metadata.getModifiers(), (LimitBuilder<?>) result);
         }
 
         return result;
