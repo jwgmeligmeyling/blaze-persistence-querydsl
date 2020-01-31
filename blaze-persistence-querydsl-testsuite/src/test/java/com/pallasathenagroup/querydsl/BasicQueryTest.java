@@ -1,24 +1,24 @@
 package com.pallasathenagroup.querydsl;
 
-import com.blazebit.persistence.Criteria;
 import com.blazebit.persistence.CriteriaBuilder;
-import com.blazebit.persistence.CriteriaBuilderFactory;
-import com.blazebit.persistence.spi.CriteriaBuilderConfiguration;
+import com.blazebit.persistence.testsuite.AbstractCoreTest;
+import com.blazebit.persistence.testsuite.tx.TxVoidWork;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.dsl.Param;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
-import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.persistence.EntityManager;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
@@ -29,24 +29,26 @@ import static com.pallasathenagroup.querydsl.SetUtils.union;
 import static com.pallasathenagroup.querydsl.WindowExpressions.lastValue;
 import static com.pallasathenagroup.querydsl.WindowExpressions.rowNumber;
 import static com.querydsl.jpa.JPAExpressions.select;
-import static org.hibernate.testing.transaction.TransactionUtil.doInJPA;
 
-public class BasicQueryTest extends BaseCoreFunctionalTestCase {
-
-    private CriteriaBuilderConfiguration criteriaBuilderConfiguration;
-    private CriteriaBuilderFactory criteriaBuilderFactory;
+public class BasicQueryTest extends AbstractCoreTest {
 
     @Override
-    protected Class<?>[] getAnnotatedClasses() {
+    protected Class<?>[] getEntityClasses() {
         return new Class<?>[] { TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class, IdHolderCte.class };
     }
 
+    public void doInJPA(Consumer<EntityManager> function) {
+        transactional(new TxVoidWork() {
+            @Override
+            public void work(EntityManager entityManager) {
+                function.accept(entityManager);
+            }
+        });
+    }
+    
     @Before
     public void setUp() {
-        criteriaBuilderConfiguration = Criteria.getDefault();
-        criteriaBuilderFactory = criteriaBuilderConfiguration.createCriteriaBuilderFactory(this.sessionFactory());
-
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             TestEntity testEntity = new TestEntity();
             testEntity.field = "bogus";
             entityManager.persist(testEntity);
@@ -55,12 +57,12 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testThroughBPVisitor() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             JPAQuery<Tuple> query = new JPAQuery<TestEntity>(entityManager).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(1));
 
-            BlazeCriteriaVisitor<Tuple> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, JPQLTemplates.DEFAULT);
+            BlazeCriteriaVisitor<Tuple> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(cbf, entityManager, JPQLTemplates.DEFAULT);
             blazeCriteriaVisitor.serialize(query.getMetadata(), false, null);
             CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
             List<Tuple> fetch = criteriaBuilder.getResultList();
@@ -70,8 +72,8 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testThroughBlazeJPAQuery() {
-        doInJPA(this::sessionFactory, entityManager -> {
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+        doInJPA(entityManager -> {
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(1));
 
@@ -82,10 +84,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testParameterExpression() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             Param<Integer> param = new Param<Integer>(Integer.class, "theSuperName");
 
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(param))
                     .set(param, 1);
@@ -97,10 +99,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testParameterExpressionInSelect() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             Param<Integer> param = new Param<Integer>(Integer.class, "theSuperName");
 
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), param)
                     .where(testEntity.field.length().gt(param))
                     .set(param, 1);
@@ -112,9 +114,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testSubQuery() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
@@ -125,9 +127,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testWindowFunction() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), rowNumber(), lastValue(testEntity.field).over().partitionBy(testEntity.id))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
@@ -138,10 +140,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testNestedSubQuery() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");
             QTestEntity sub2 = new QTestEntity("sub2");
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.id.in(select(sub.id).from(sub).where(sub.id.in(select(sub2.id).from(sub2).where(sub2.id.eq(sub.id)))).limit(5)));
 
@@ -152,8 +154,8 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testTransformBlazeJPAQuery() {
-        doInJPA(this::sessionFactory, entityManager -> {
-            Map<Long, String> blep = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory).from(testEntity)
+        doInJPA(entityManager -> {
+            Map<Long, String> blep = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .where(testEntity.field.length().gt(1))
                     .groupBy(testEntity.id, testEntity.field)
                     .transform(GroupBy.groupBy(testEntity.id).as(testEntity.field));
@@ -165,8 +167,8 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testAssociationJoin() {
-        doInJPA(this::sessionFactory, entityManager -> {
-            Map<Author, List<Book>> booksByAuthor = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+        doInJPA(entityManager -> {
+            Map<Author, List<Book>> booksByAuthor = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .from(author)
                     .innerJoin(author.books, book)
                     .transform(GroupBy.groupBy(author).as(GroupBy.list(book)));
@@ -175,10 +177,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testEntityJoin() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             QAuthor otherAuthor = new QAuthor("otherAuthor");
             QBook otherBook = new QBook("otherBook");
-            Map<Author, List<Book>> booksByAuthor = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            Map<Author, List<Book>> booksByAuthor = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .from(otherAuthor)
                     .innerJoin(otherBook).on(otherBook.author.eq(otherAuthor))
                     .transform(GroupBy.groupBy(otherAuthor).as(GroupBy.list(otherBook)));
@@ -188,12 +190,12 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testFromValues() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             Book theBook = new Book();
             theBook.id = 1337l;
             theBook.name = "test";
 
-            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .fromValues(book, Collections.singleton(theBook))
                     .select(book)
                     .fetch();
@@ -205,7 +207,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     @Test
     @Ignore
     public void testFluentUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
             Book theBook = new Book();
             theBook.id = 1337l;
@@ -219,10 +221,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
 
 
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
 
-            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .from(book)
                     .select(book)
                     .where(book.id.eq(1337l))
@@ -237,7 +239,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     }
     @Test
     public void testSimpleUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
             Book theBook = new Book();
             theBook.id = 1337l;
@@ -251,10 +253,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
         });
 
 
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
 
-            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .union(select(book).from(book).where(book.id.eq(1337l)), select(book).from(book).where(book.id.eq(42l)))
                     .fetch();
 
@@ -264,7 +266,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testComplexUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
             Book theBook = new Book();
             theBook.id = 1337l;
@@ -277,10 +279,10 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             entityManager.merge(theSequel);
         });
 
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
 
-            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .union(select(book).from(book).where(book.id.eq(1337l)),
                         new BlazeJPAQuery<TestEntity>().intersect(
                                 select(book).from(book).where(book.id.eq(41l)),
@@ -297,7 +299,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testComplexSubqueryUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
             Book theBook = new Book();
             theBook.id = 1337l;
@@ -310,9 +312,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
             entityManager.merge(theSequel);
         });
 
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            criteriaBuilderFactory.create(entityManager, Book.class)
+            cbf.create(entityManager, Book.class)
                     .from(Book.class)
                     .where("book.name").in().from(Book.class, "b")
                         .select("b.name")
@@ -320,7 +322,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
                         .endSet()
                         .end();
 
-            SetOperation<Long> union = new BlazeJPAQuery<Long>(entityManager, criteriaBuilderFactory)
+            SetOperation<Long> union = new BlazeJPAQuery<Long>(entityManager, cbf)
                     .union(select(book.id).from(book).where(book.id.eq(1337l)),
                             new BlazeJPAQuery<Long>().intersect(
                                     select(book.id).from(book).where(book.id.eq(41l)),
@@ -332,7 +334,7 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
             QBook book2 = new QBook("secondBook");
 
-            List<Book> fetch = new BlazeJPAQuery<Book>(entityManager, criteriaBuilderFactory)
+            List<Book> fetch = new BlazeJPAQuery<Book>(entityManager, cbf)
                     .select(book2)
                     .from(book2).where(book2.id.in(union))
                     .fetch();
@@ -343,9 +345,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testCTE() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(select(book.id, book.name).from(book))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
@@ -356,9 +358,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testCTEUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book), intersect(select(book.id, book.name).from(book), select(book.id, book.name).from(book))))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
@@ -371,13 +373,13 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testCTEFromValues() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
             Book theBook = new Book();
             theBook.id = 1337l;
             theBook.name = "test";
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
-                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
+                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                             .fromValues(book, Collections.singleton(theBook))
                             .select(book.id, book.name))
                     .select(idHolderCte.id).from(idHolderCte)
@@ -389,9 +391,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testRecursiveCTEUnion() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book).where(book.id.eq(1L)), select(book.id, book.name).from(book)
                             .join(idHolderCte).on(idHolderCte.id.add(1L).eq(book.id))))
                     .select(idHolderCte.id).from(idHolderCte)
@@ -403,9 +405,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
 
     @Test
     public void testBindBuilder() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte)
                         .bind(idHolderCte.id).select(book.id)
                         .bind(idHolderCte.name).select(book.name)
@@ -421,9 +423,9 @@ public class BasicQueryTest extends BaseCoreFunctionalTestCase {
     @Test
     @Ignore
     public void testRecursiveBindBuilder() {
-        doInJPA(this::sessionFactory, entityManager -> {
+        doInJPA(entityManager -> {
 
-            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, criteriaBuilderFactory)
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .withRecursive(idHolderCte)
                         .bind(idHolderCte.id).select(book.id)
                         .bind(idHolderCte.name).select(book.name)

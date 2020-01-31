@@ -20,6 +20,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <querydsl.version>4.2.3-SNAPSHOT</querydsl.version>
         <hibernate.version>5.4.10.Final</hibernate.version>
-        <blaze-persistence.version>1.4.0</blaze-persistence.version>
+        <blaze-persistence.version>1.4.1</blaze-persistence.version>
     </properties>
 </project>
