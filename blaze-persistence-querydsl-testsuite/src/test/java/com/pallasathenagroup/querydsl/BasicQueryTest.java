@@ -2,6 +2,14 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
+import com.blazebit.persistence.testsuite.entity.ParameterOrderCte;
+import com.blazebit.persistence.testsuite.entity.ParameterOrderCteB;
+import com.blazebit.persistence.testsuite.entity.ParameterOrderEntity;
+import com.blazebit.persistence.testsuite.entity.QRecursiveEntity;
+import com.blazebit.persistence.testsuite.entity.RecursiveEntity;
+import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
+import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
+import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
@@ -20,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static com.blazebit.persistence.testsuite.entity.QRecursiveEntity.recursiveEntity;
 import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
@@ -34,7 +43,16 @@ public class BasicQueryTest extends AbstractCoreTest {
 
     @Override
     protected Class<?>[] getEntityClasses() {
-        return new Class<?>[] { TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class, IdHolderCte.class };
+        return new Class<?>[] {
+                TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class, IdHolderCte.class,
+                RecursiveEntity.class,
+                TestCTE.class,
+                TestAdvancedCTE1.class,
+                TestAdvancedCTE2.class,
+                ParameterOrderCte.class,
+                ParameterOrderCteB.class,
+                ParameterOrderEntity.class
+        };
     }
 
     public void doInJPA(Consumer<EntityManager> function) {
@@ -439,6 +457,23 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .fetch();
 
             System.out.println(fetch);
+        });
+    }
+
+    @Test
+    public void testInlineEntityWithLimit() {
+        doInJPA(entityManager -> {
+            QRecursiveEntity recursiveEntity = new QRecursiveEntity("t");
+
+            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+                    .select(recursiveEntity)
+                    .from(select(recursiveEntity)
+                        .from(recursiveEntity)
+                        .where(recursiveEntity.parent.name.eq("root1"))
+                        .orderBy(recursiveEntity.name.asc())
+                        .limit(1L), recursiveEntity)
+                        .fetch();
+
         });
     }
 

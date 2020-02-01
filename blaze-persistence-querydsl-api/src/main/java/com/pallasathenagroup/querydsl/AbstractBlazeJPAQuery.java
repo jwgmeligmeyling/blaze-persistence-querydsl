@@ -302,6 +302,11 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return queryMixin.fullJoin(target, alias);
     }
 
+    @Override
+    public <X> Q from(SubQueryExpression<X> subQueryExpression, Path<X> alias) {
+        return (Q) queryMixin.from(ExpressionUtils.as((Expression) subQueryExpression, alias));
+    }
+
     // End full joins
 
     public Q setCacheable(boolean cacheable) {

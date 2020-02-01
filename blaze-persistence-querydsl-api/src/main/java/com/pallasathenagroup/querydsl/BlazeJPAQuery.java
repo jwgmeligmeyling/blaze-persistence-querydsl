@@ -1,6 +1,7 @@
 package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.querydsl.core.JoinFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
@@ -10,6 +11,8 @@ import javax.persistence.EntityManager;
 
 @SuppressWarnings("unused")
 public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>> implements ExtendedJPAQuery<T, BlazeJPAQuery<T>>, ExtendedFetchable<T> {
+
+    public static final JoinFlag LATERAL = new JoinFlag("LATERAL", JoinFlag.Position.BEFORE_TARGET);
 
     public BlazeJPAQuery() {
         this(null);

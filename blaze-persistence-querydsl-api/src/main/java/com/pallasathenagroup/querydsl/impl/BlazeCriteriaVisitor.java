@@ -7,6 +7,7 @@ import com.blazebit.persistence.DistinctBuilder;
 import com.blazebit.persistence.FinalSetOperationCTECriteriaBuilder;
 import com.blazebit.persistence.FinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.FinalSetOperationSubqueryBuilder;
+import com.blazebit.persistence.From;
 import com.blazebit.persistence.FromBaseBuilder;
 import com.blazebit.persistence.FromBuilder;
 import com.blazebit.persistence.FullQueryBuilder;
@@ -208,7 +209,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
 
                     if (criteriaBuilder instanceof SelectBaseCTECriteriaBuilder) {
-                        for (int i = 0; i < cteAliases.size(); i++) {
+                        for (int i = 0; cteAliases != null && i < cteAliases.size(); i++) {
                             Path<?> alias = cteAliases.get(i);
                             String aliasString = relativePathString(cteEntityPath, alias);
                             Expression<?> projExpression = projection.get(i);
@@ -216,6 +217,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                             SelectBuilder<?> bindBuilder = ((SelectBaseCTECriteriaBuilder<?>) criteriaBuilder).bind(aliasString);
                             setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
                         }
+                        cteAliases = null;
                     } else {
                         for (Expression<?> selection : projection) {
                             renderSingleSelect(selection, (SelectBuilder<?>) criteriaBuilder);
@@ -350,6 +352,15 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                 switch (joinExpression.getType()) {
                     case DEFAULT:
+                        if (fromBuilder instanceof FromBuilder) {
+                            criteriaBuilder = (X) fromBuilder;
+                            From from = criteriaBuilder.getFrom(alias);
+                            if (from != null) {
+                                if (from.getJavaType().equals(entityPath.getType())) {
+                                    break;
+                                }
+                            }
+                        }
                         criteriaBuilder = fromBuilder.from(entityPath.getType(), alias);
                         break;
                     default:
@@ -367,7 +378,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                             setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
                         } else if (!hasCondition) {
                             if (fetch) {
-                                ((FullQueryBuilder<?,?>) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
+                                ((FullQueryBuilder<?, ?>) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
                             } else {
                                 criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
                             }
@@ -379,6 +390,45 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                         break;
                 }
 
+            } else if (target instanceof SubQueryExpression)  {
+                switch (joinExpression.getType()) {
+                    case DEFAULT:
+                        FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder = fromBuilder.fromEntitySubquery(target.getType(), alias);
+                        FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder1 = (FullSelectCTECriteriaBuilder<X>) serializeSubQuery(xFullSelectCTECriteriaBuilder, target);
+                        criteriaBuilder = xFullSelectCTECriteriaBuilder1.end();
+                        break;
+                    default:
+                        JoinType joinType = getJoinType(joinExpression);
+
+                        boolean isLateral = joinExpression.hasFlag(BlazeJPAQuery.LATERAL);
+
+                        if (fetch) {
+                            logger.warning("Fetch is ignored due to subquery entity join!");
+                        }
+
+                        if (isLateral) {
+                            if (hasCondition) {
+                                FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralOnEntitySubquery(target.getType(), alias, alias, joinType);
+                                JoinOnBuilder<X> xJoinOnBuilder = ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target)).end();
+                                setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                                criteriaBuilder = xJoinOnBuilder.end();
+                            } else {
+                                FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder2 = criteriaBuilder.joinLateralEntitySubquery(target.getType(), alias, alias, joinType);
+                                criteriaBuilder = ((FullSelectCTECriteriaBuilder<X>) serializeSubQuery(xFullSelectCTECriteriaBuilder2, target)).end();
+                            }
+                        } else {
+
+                            if (!hasCondition) {
+                                throw new IllegalStateException("No on-clause for subquery entity join!");
+                            }
+
+                            FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinOnEntitySubquery(target.getType(), alias, joinType);
+                            JoinOnBuilder<X> xJoinOnBuilder = ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target)).end();
+                            setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                            criteriaBuilder = xJoinOnBuilder.end();
+                        }
+                        break;
+                }
             } else {
                 // TODO Handle Treat operations
                 throw new UnsupportedOperationException("Joins for " + target + " is not yet implemented");

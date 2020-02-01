@@ -50,7 +50,6 @@
             <groupId>com.blazebit</groupId>
             <artifactId>blaze-persistence-core-testsuite</artifactId>
             <version>${blaze-persistence.version}</version>
-            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <artifactId>*</artifactId>
