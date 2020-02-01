@@ -8,6 +8,7 @@ import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.Queryable;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
+import com.querydsl.core.JoinFlag;
 import com.querydsl.core.NonUniqueResultException;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
@@ -35,6 +36,8 @@ import java.util.Map;
 
 @SuppressWarnings("unused")
 public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T, Q>> extends AbstractJPAQuery<T, Q> implements ExtendedJPAQuery<T, Q>, ExtendedFetchable<T> {
+
+    public static final JoinFlag LATERAL = new JoinFlag("LATERAL", JoinFlag.Position.BEFORE_TARGET);
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
 
@@ -305,6 +308,30 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     @Override
     public <X> Q from(SubQueryExpression<X> subQueryExpression, Path<X> alias) {
         return (Q) queryMixin.from(ExpressionUtils.as((Expression) subQueryExpression, alias));
+    }
+
+    @Override
+    public <X> Q leftJoin(SubQueryExpression<X> o, Path<X> alias) {
+        return (Q) queryMixin.leftJoin((Expression) o, alias);
+    }
+
+    public Q lateral() {
+        return queryMixin.addJoinFlag(LATERAL);
+    }
+
+    @Override
+    public <X> Q rightJoin(SubQueryExpression<X> o, Path<X> alias) {
+        return (Q) queryMixin.rightJoin((Expression) o, alias);
+    }
+
+    @Override
+    public <X> Q fullJoin(SubQueryExpression<X> o, Path<X> alias) {
+        return (Q) queryMixin.fullJoin((Expression) o, alias);
+    }
+
+    @Override
+    public <X> Q innerJoin(SubQueryExpression<X> o, Path<X> alias) {
+        return (Q) queryMixin.innerJoin((Expression) o, alias);
     }
 
     // End full joins

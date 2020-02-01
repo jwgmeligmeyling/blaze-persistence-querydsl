@@ -48,6 +48,18 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     <X> Q from(SubQueryExpression<X> subQueryExpression, Path<X> alias);
 
     /**
+     * Adds a left join to the given target
+     *
+     * @param o subquery
+     * @param alias alias
+     * @return the current object
+     */
+    <X> Q leftJoin(SubQueryExpression<X> o, Path<X> alias);
+    <X> Q rightJoin(SubQueryExpression<X> o, Path<X> alias);
+    <X> Q fullJoin(SubQueryExpression<X> o, Path<X> alias);
+    <X> Q innerJoin(SubQueryExpression<X> o, Path<X> alias);
+
+    /**
      * Creates an union expression for the given subqueries
      *
      * @param <RT> union subquery result

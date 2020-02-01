@@ -477,4 +477,74 @@ public class BasicQueryTest extends AbstractCoreTest {
         });
     }
 
+    @Test
+    public void testMultipleInlineEntityWithLimitJoin() {
+        doInJPA(entityManager -> {
+            QRecursiveEntity t = new QRecursiveEntity("t");
+            QRecursiveEntity subT = new QRecursiveEntity("subT");
+            QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
+
+            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+                    .select(t)
+                    .from(new BlazeJPAQuery<RecursiveEntity>().select(t).from(t)
+                            .leftJoin(select(subT).from(subT).where(subT.parent.name.eq("root1")).orderBy(subT.name.asc()).limit(1), subT)
+                            .on(t.eq(subT))
+                            .where(t.parent.name.eq("root1"))
+                            .orderBy(t.name.asc())
+                            .limit(1L), t)
+                    .leftJoin(select(subT2).from(subT2)
+                        .where(subT2.parent.name.eq("root1"))
+                        .orderBy(subT2.name.asc())
+                        .limit(1), subT2)
+                        .on(t.eq(subT2))
+                    .fetch();
+
+        });
+    }
+
+    @Test
+    public void testMultipleInlineEntityWithLimitJoinLateral() {
+
+        doInJPA(entityManager -> {
+            QRecursiveEntity t = new QRecursiveEntity("t");
+            QRecursiveEntity subT = new QRecursiveEntity("subT");
+            QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
+            QRecursiveEntity subT3 = new QRecursiveEntity("subT3");
+
+            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+                    .select(t)
+                    .from(new BlazeJPAQuery<RecursiveEntity>().select(t).from(t)
+                            .leftJoin(select(subT).from(subT).where(subT.parent.name.eq("root1")).orderBy(subT.name.asc()).limit(1), subT)
+                            .on(t.eq(subT))
+                            .where(t.parent.name.eq("root1"))
+                            .orderBy(t.name.asc())
+                            .limit(1L), t)
+                    .leftJoin(select(subT2).from(subT2)
+                        .where(subT2.parent.name.eq("root1"))
+                        .orderBy(subT2.name.asc())
+                        .limit(1), subT3)
+                        .on(t.eq(subT3))
+                        .lateral()
+                    .fetch();
+
+        });
+    }
+
+    @Test
+    public void testJoinInlineEntityWithLimit() {
+        doInJPA(entityManager -> {
+            QRecursiveEntity t = new QRecursiveEntity("t");
+            QRecursiveEntity subT = new QRecursiveEntity("subT");
+            QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
+            QRecursiveEntity subT3 = new QRecursiveEntity("subT3");
+
+            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+                    .select(t, subT2)
+                    .from(t)
+                    .leftJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
+                    .lateral()
+                    .fetch();
+        });
+    }
+
 }
