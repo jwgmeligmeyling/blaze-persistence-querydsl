@@ -12,11 +12,11 @@ import com.querydsl.core.types.Visitor;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class SetOperationImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implements SetOperation<T> {
+public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implements SetExpression<T> {
 
     private final Q query;
 
-    public SetOperationImpl(Q query) {
+    public SetExpressionImpl(Q query) {
         this.query = query;
     }
 
@@ -77,20 +77,26 @@ public class SetOperationImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implemen
     }
 
     @Override
-    public SetOperation<T> limit(long limit) {
+    public SetExpression<T> limit(long limit) {
         query.limit(limit);
         return this;
     }
 
     @Override
-    public SetOperation<T> offset(long offset) {
+    public SetExpression<T> offset(long offset) {
         query.offset(offset);
         return this;
     }
 
     @Override
-    public SetOperation<T> orderBy(OrderSpecifier<?>... o) {
+    public SetExpression<T> orderBy(OrderSpecifier<?>... o) {
         query.orderBy(o);
         return this;
     }
+
+    @Override
+    public String getQueryString() {
+        return query.getQueryString();
+    }
+
 }

@@ -10,6 +10,7 @@ import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.JoinFlag;
 import com.querydsl.core.NonUniqueResultException;
+import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.QueryResults;
@@ -30,6 +31,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +100,19 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
+    public <X> Q with(Path<X> alias, SubQueryExpression<X> o) {
+        Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, o);
+        return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, expr));
+    }
+
+    @Override
+    public <X> Q withRecursive(Path<X> alias, SubQueryExpression<X> o) {
+        // TODO recursive
+        Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, o);
+        return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, expr));
+    }
+
+    @Override
     public WithBuilder<Q> withRecursive(EntityPath<?> alias, Path<?>... columns) {
         Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
         Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
@@ -150,6 +165,10 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return ((FullQueryBuilder<T,?>) getCriteriaBuilder(getMetadata().getModifiers()))
                 .page(keysetPage, firstResult, maxResults)
                 .getResultList();
+    }
+
+    public String getQueryString() {
+        return getCriteriaBuilder(null).getQueryString();
     }
 
     protected Queryable<T, ?> getCriteriaBuilder(@Nullable QueryModifiers modifiers) {
@@ -315,6 +334,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return (Q) queryMixin.leftJoin((Expression) o, alias);
     }
 
+    @Override
     public Q lateral() {
         return queryMixin.addJoinFlag(LATERAL);
     }
@@ -344,43 +364,132 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     // Union stuff
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private <RT> SetOperation<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
+    private <RT> SetExpression<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");
         }
         this.union = SetUtils.setOperation(operator, sq.toArray(new Expression[0]));
-        return new SetOperationImpl(this);
+        return new SetExpressionImpl(this);
     }
 
     @Override
-    public <RT> SetOperation<RT> union(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> union(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_UNION, sq);
     }
 
     @Override
-    public <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> unionAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_UNION_ALL, sq);
     }
 
     @Override
-    public <RT> SetOperation<RT> intersect(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> intersect(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_INTERSECT, sq);
     }
 
     @Override
-    public <RT> SetOperation<RT> intersectAll(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> intersectAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_INTERSECT_ALL, sq);
     }
 
     @Override
-    public <RT> SetOperation<RT> except(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> except(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_EXCEPT, sq);
     }
 
     @Override
-    public <RT> SetOperation<RT> exceptAll(List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> exceptAll(List<SubQueryExpression<RT>> sq) {
         return setOperation(JPQLNextOps.SET_EXCEPT_ALL, sq);
+    }
+
+    /**
+     * Creates an union expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> union(SubQueryExpression<RT>... sq) {
+        return union(Arrays.asList(sq));
+
+    }
+
+    /**
+     * Creates an union expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> unionAll(SubQueryExpression<RT>... sq) {
+        return unionAll(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an intersect expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> intersect(SubQueryExpression<RT>... sq) {
+        return intersect(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an intersect expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> intersectAll(SubQueryExpression<RT>... sq) {
+        return intersectAll(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> except(SubQueryExpression<RT>... sq) {
+        return except(Arrays.asList(sq));
+    }
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    @SafeVarargs
+    public final <RT> SetExpression<RT> exceptAll(SubQueryExpression<RT>... sq) {
+        return exceptAll(Arrays.asList(sq));
+    }
+
+    private CTEUtils.Binds<T> binds = new CTEUtils.Binds<>();
+
+    /**
+     *
+     * @param path
+     * @param expression
+     * @param <U>
+     * @return
+     * @deprecated Fluent API proof of concept
+     */
+    @Deprecated
+    public <U> Q bind(Path<? super U> path, Expression<? extends U> expression) {
+        select(binds.bind(path, expression));
+        return queryMixin.getSelf();
     }
 
 }

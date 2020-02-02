@@ -21,4 +21,6 @@ public interface ExtendedFetchable<T> extends Fetchable<T>  {
         return Optional.ofNullable(fetchFirst());
     }
 
+    String getQueryString();
+
 }

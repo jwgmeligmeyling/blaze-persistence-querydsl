@@ -30,10 +30,14 @@ import com.blazebit.persistence.SetOperationBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
+import com.blazebit.persistence.parser.EntityMetamodel;
+import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
+import com.blazebit.persistence.spi.ExtendedAttribute;
+import com.blazebit.persistence.spi.ExtendedManagedType;
 import com.google.common.collect.ImmutableList;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
-import com.pallasathenagroup.querydsl.SetOperationImpl;
+import com.pallasathenagroup.querydsl.SetExpressionImpl;
 import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
@@ -53,6 +57,7 @@ import com.querydsl.core.types.Path;
 import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.TemplateExpression;
 import com.querydsl.core.types.Visitor;
+import com.querydsl.core.types.dsl.BeanPath;
 import com.querydsl.core.types.dsl.CollectionExpressionBase;
 import com.querydsl.jpa.JPAQueryMixin;
 import com.querydsl.jpa.JPQLSerializer;
@@ -69,6 +74,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
+import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 
@@ -120,8 +126,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
     }
 
     public void serialize(Expression<?> expression) {
-        Class<T> type = (Class<T>) expression.getType();
-        this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
+        this.criteriaBuilder = (CriteriaBuilder) criteriaBuilderFactory.create(entityManager, Object.class);
         this.queryable = (Queryable<T, ?>) serializeSubQuery(this.criteriaBuilder, expression);
     }
 
@@ -142,7 +147,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 criteriaBuilder = setOperation.getArg(0).accept(this, criteriaBuilder);
                 SetOperationBuilder<?,?> setOperationBuilder = (SetOperationBuilder<?,?>) criteriaBuilder;
                 Object setBuilder = null;
-                boolean isNestedSet = setOperation.getArg(1) instanceof Operation<?> || setOperation.getArg(1) instanceof SetOperationImpl;
+                boolean isNestedSet = setOperation.getArg(1) instanceof Operation<?> || setOperation.getArg(1) instanceof SetExpressionImpl;
                 switch ((JPQLNextOps) setOperation.getOperator()) {
                     case SET_UNION:
                         setBuilder = isNestedSet ?
@@ -210,14 +215,52 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                     List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
 
                     if (criteriaBuilder instanceof SelectBaseCTECriteriaBuilder) {
-                        for (int i = 0; cteAliases != null && i < cteAliases.size(); i++) {
-                            Path<?> alias = cteAliases.get(i);
-                            String aliasString = relativePathString(cteEntityPath, alias);
-                            Expression<?> projExpression = projection.get(i);
+                        SelectBaseCTECriteriaBuilder<?> selectBaseCriteriaBuilder = (SelectBaseCTECriteriaBuilder<?>) criteriaBuilder;
 
-                            SelectBuilder<?> bindBuilder = ((SelectBaseCTECriteriaBuilder<?>) criteriaBuilder).bind(aliasString);
-                            setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
+                        boolean bindEntity = projection.size() == 1 && subQueryMetadata.getJoins().get(0).getTarget().accept(new JoinTargetAliasPathResolver(), null).equals(projection.get(0));
+
+                        if (bindEntity) {
+                            EntityMetamodel metamodel = criteriaBuilderFactory.getService(EntityMetamodel.class);
+                            Path<?> pathExpression = (Path<?>) projection.get(0);
+
+                            ExtendedManagedType<?> managedType = metamodel.getManagedType(ExtendedManagedType.class, pathExpression.getType());
+                            Map<String, ? extends ExtendedAttribute<?, ?>> ownedSingularAttributes = managedType.getOwnedSingularAttributes();
+
+                            for (Map.Entry<String, ? extends ExtendedAttribute<?,?>> ownedSingularAttribute : ownedSingularAttributes.entrySet()) {
+                                String attributeName = ownedSingularAttribute.getKey();
+                                ExtendedAttribute<?, ?> attribute = ownedSingularAttribute.getValue();
+
+                                if (!JpaMetamodelUtils.isAssociation(attribute.getAttribute())) {
+                                    SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(attributeName);
+                                    BeanPath<?> beanPath = new BeanPath<Object>(attribute.getElementClass(), pathExpression, attributeName);
+                                    setExpressionSubqueries(beanPath, bindBuilder::select, bindBuilder::selectSubqueries);
+                                }
+                            }
+                        } else {
+                            for (int i = 0; i < projection.size(); i++) {
+                                Expression<?> projExpression = projection.get(i);
+                                Path<?> alias = null;
+
+                                if (projExpression instanceof Operation) {
+                                    Operation<?> projOperation = (Operation<?>) projExpression;
+                                    if (projOperation.getOperator() == BIND) {
+                                        alias = (Path<?>) projOperation.getArg(1);
+                                        cteEntityPath = alias.getRoot();
+                                        projExpression = projOperation.getArg(0);
+                                    }
+                                }
+                                if (alias == null && cteAliases != null) {
+                                    alias = cteAliases.get(i);
+                                }
+
+                                if (alias != null) {
+                                    String aliasString = relativePathString(cteEntityPath, alias);
+                                    SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(aliasString);
+                                    setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
+                                }
+                            }
                         }
+
                         // TODO
 //                        cteAliases = null;
                     } else {
@@ -398,80 +441,71 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
             } else if (target instanceof SubQueryExpression)  {
                 switch (joinExpression.getType()) {
-                    case DEFAULT:
-                        FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder = fromBuilder.fromEntitySubquery(target.getType(), alias);
-                        FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder1 = (FullSelectCTECriteriaBuilder<X>) serializeSubQuery(xFullSelectCTECriteriaBuilder, target);
-                        criteriaBuilder = xFullSelectCTECriteriaBuilder1.end();
+                    case DEFAULT: {
+                        FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder = fromBuilder.fromSubquery(target.getType(), alias);
+                        Object o = serializeSubQuery(xFullSelectCTECriteriaBuilder, target);
+                        criteriaBuilder = o instanceof FinalSetOperationCTECriteriaBuilder ?
+                                ((FinalSetOperationCTECriteriaBuilder<X>) o).end() :
+                                ((FullSelectCTECriteriaBuilder<X>) o).end();
                         break;
-                    default:
+                    }
+                    default: {
                         JoinType joinType = getJoinType(joinExpression);
-
                         boolean isLateral = joinExpression.hasFlag(AbstractBlazeJPAQuery.LATERAL);
 
                         if (fetch) {
                             logger.warning("Fetch is ignored due to subquery entity join!");
                         }
 
-                        Path fromPath = ((SubQueryExpression<?>) target).getMetadata().getJoins().get(0).getTarget().accept(new DefaultVisitorImpl<Path<?>, Object>() {
-                            @Override
-                            public Path<?> visit(Operation<?> operation, Object o) {
-                                return operation.getArg(0).accept(this, o);
-                            }
-
-                            @Override
-                            public Path<?> visit(Path<?> path, Object o) {
-                                return path;
-                            }
-
-                            @Override
-                            public Path<?> visit(SubQueryExpression<?> subQueryExpression, Object o) {
-                                return subQueryExpression.getMetadata().getJoins().get(0).getTarget().accept(this, o);
-                            }
-                        }, null);
-
+                        SubQueryExpression<?> subQueryExpression = target.accept(new FirstSubqueryResolver(), null);
+                        Path<?> fromPath = subQueryExpression.getMetadata().getJoins().get(0).getTarget().accept(new FirstSubqueryTargetPathResolver(), null);
                         boolean entityJoin = fromPath.getMetadata().isRoot();
 
-                        // TODO: Visit for SET operations
-                        String subqueryAlias = ((EntityPath<?>) ((SubQueryExpression<?>) target).getMetadata().getProjection()).getMetadata().getName();
+                        if (hasCondition) {
+                            FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder;
 
-                        if (isLateral) {
+                            if (isLateral) {
+                                // TODO: Visit for SET operations
+                                String subqueryAlias = subQueryExpression.getMetadata().getJoins().get(0).getTarget().accept(new JoinTargetAliasPathResolver(), null).getMetadata().getName();
+                                if (entityJoin) {
+                                    joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralOnSubquery(target.getType(), alias, joinType);
+                                } else {
+                                    joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralOnSubquery(renderExpression(fromPath), alias, subqueryAlias, joinType);
+                                }
+                            } else {
+                                if (!entityJoin) {
+                                    throw new IllegalStateException("Entity join to association");
+                                }
+                                joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinOnSubquery(target.getType(), alias, joinType);
+                            }
 
-                            if (hasCondition) {
+                            Object o = serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target);
+                            JoinOnBuilder<X> joinOnBuilder = o instanceof FinalSetOperationCTECriteriaBuilder ?
+                                    ((FinalSetOperationCTECriteriaBuilder<JoinOnBuilder<X>>) o).end() :
+                                    ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) o).end();
+                            criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), joinOnBuilder::setOnExpression, joinOnBuilder::setOnExpressionSubqueries);
+                        } else {
+                            if (isLateral) {
+                                FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder;
+                                String subqueryAlias = subQueryExpression.getMetadata().getJoins().get(0).getTarget().accept(new JoinTargetAliasPathResolver(), null).getMetadata().getName();
 
                                 if (entityJoin) {
-                                    FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralOnEntitySubquery(target.getType(), alias, subqueryAlias, joinType);
-                                    JoinOnBuilder<X> xJoinOnBuilder = ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target)).end();
-                                    criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                                    xFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralSubquery(target.getType(), alias, joinType);
                                 } else {
-                                    FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralOnEntitySubquery(renderExpression(fromPath), alias, subqueryAlias, joinType);
-                                    JoinOnBuilder<X> xJoinOnBuilder = ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target)).end();
-                                    criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                                    xFullSelectCTECriteriaBuilder = criteriaBuilder.joinLateralSubquery(renderExpression(fromPath), alias, subqueryAlias, joinType);
                                 }
+
+                                Object o = serializeSubQuery(xFullSelectCTECriteriaBuilder, target);
+                                criteriaBuilder = o instanceof FinalSetOperationCTECriteriaBuilder ?
+                                        ((FinalSetOperationCTECriteriaBuilder<X>) o).end() :
+                                        ((FullSelectCTECriteriaBuilder<X>) o).end();
 
                             } else {
-                                if (entityJoin) {
-                                    FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder2 = criteriaBuilder.joinLateralEntitySubquery(target.getType(), alias, subqueryAlias, joinType);
-                                    criteriaBuilder = ((FullSelectCTECriteriaBuilder<X>) serializeSubQuery(xFullSelectCTECriteriaBuilder2, target)).end();
-                                } else {
-                                    FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder2 = criteriaBuilder.joinLateralEntitySubquery(renderExpression(fromPath), alias, subqueryAlias, joinType);
-                                    criteriaBuilder = ((FullSelectCTECriteriaBuilder<X>) serializeSubQuery(xFullSelectCTECriteriaBuilder2, target)).end();
-                                }
-                            }
-                        } else {
-
-                            if (!hasCondition) {
                                 throw new IllegalStateException("No on-clause for subquery entity join!");
                             }
-
-                            if (!entityJoin) {
-                                throw new IllegalStateException("Entity join to association");
-                            }
-
-                            FullSelectCTECriteriaBuilder<JoinOnBuilder<X>> joinOnBuilderFullSelectCTECriteriaBuilder = criteriaBuilder.joinOnEntitySubquery(target.getType(), alias, subqueryAlias, joinType);
-                            JoinOnBuilder<X> xJoinOnBuilder = ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target)).end();
-                            criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
                         }
                         break;
+                    }
                 }
             } else {
                 // TODO Handle Treat operations
@@ -562,7 +596,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         boolean wrap = templates.wrapConstant(constant);
         if (wrap) append("(");
         append(":");
-        append(constantToLabel.computeIfAbsent(constant, o -> "param_" + (constantToLabel.size() + 1)));
+        append(constantToLabel.computeIfAbsent(constant, o -> "param_" + constantToLabel.size()));
         if (wrap) append(")");
     }
 
@@ -605,7 +639,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         return subQueryToLabel;
     }
 
-    private EntityPath<?> cteEntityPath;
+    private Path<?> cteEntityPath;
     private List<Path<?>> cteAliases;
     private boolean recursive;
 
@@ -652,7 +686,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                         subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
                         ((SelectCTECriteriaBuilder<?>) serializeSubQuery(recursiveCriteriaBuilder, subQuery)).end();
                     } else {
-                        FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteEntityPath.getType());
+                        FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(type);
 
                         Expression<?> subQueryExpression = args.get(1);
                         Object result = serializeSubQuery(cteBuilder, subQueryExpression);
@@ -705,17 +739,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         return pathString.toString();
     }
 
-    private static class CteAttributesVisitor implements Visitor<List<Path<?>>, List<Path<?>>> {
-
-        @Override
-        public List<Path<?>> visit(Constant<?> expr, List<Path<?>> context) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<Path<?>> visit(FactoryExpression<?> expr, List<Path<?>> context) {
-            throw new UnsupportedOperationException();
-        }
+    private static class CteAttributesVisitor extends DefaultVisitorImpl<List<Path<?>>, List<Path<?>>> {
 
         @Override
         public List<Path<?>> visit(Operation<?> operation, List<Path<?>> cteAliases) {
@@ -731,26 +755,9 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         }
 
         @Override
-        public List<Path<?>> visit(ParamExpression<?> expr, List<Path<?>> context) {
-            throw new UnsupportedOperationException();
-
-        }
-
-        @Override
         public List<Path<?>> visit(Path<?> expr, List<Path<?>> context) {
             context.add(expr);
             return context;
-        }
-
-        @Override
-        public List<Path<?>> visit(SubQueryExpression<?> expr, List<Path<?>> context) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<Path<?>> visit(TemplateExpression<?> expr, List<Path<?>> context) {
-            throw new UnsupportedOperationException();
-
         }
 
         private void visit(List<Expression<?>> exprs, List<Path<?>> context) {
@@ -767,6 +774,47 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     public Queryable<T, ?> getQueryable() {
         return queryable;
+    }
+
+    private static class JoinTargetAliasPathResolver extends DefaultVisitorImpl<Path<?>, Void> {
+        @Override
+        public Path<?> visit(Operation<?> operation, Void aVoid) {
+            return operation.getArg(1).accept(this, aVoid);
+        }
+
+        @Override
+        public Path<?> visit(Path<?> path, Void aVoid) {
+            return path;
+        }
+    }
+
+    private static class FirstSubqueryTargetPathResolver extends DefaultVisitorImpl<Path<?>, Object> {
+        @Override
+        public Path<?> visit(Operation<?> operation, Object o) {
+            return operation.getArg(0).accept(this, o);
+        }
+
+        @Override
+        public Path<?> visit(Path<?> path, Object o) {
+            return path;
+        }
+
+        @Override
+        public Path<?> visit(SubQueryExpression<?> subQueryExpression, Object o) {
+            return subQueryExpression.getMetadata().getJoins().get(0).getTarget().accept(this, o);
+        }
+    }
+
+    private static class FirstSubqueryResolver extends DefaultVisitorImpl<SubQueryExpression<?>, Object> {
+        @Override
+        public SubQueryExpression<?> visit(Operation<?> operation, Object o) {
+            return operation.getArg(0).accept(this, o);
+        }
+
+        @Override
+        public SubQueryExpression<?> visit(SubQueryExpression<?> subQueryExpression, Object o) {
+            return subQueryExpression;
+        }
     }
 
     private class FactoryExpressionObjectBuilder implements ObjectBuilder<T> {

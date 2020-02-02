@@ -78,5 +78,7 @@ public class JPQLNextTemplates extends JPQLTemplates {
         add(JPQLNextOps.SET_INTERSECT_ALL, "{0} INTERSECT ALL {1}", Precedence.OR + 1);
         add(JPQLNextOps.SET_EXCEPT, "{0} EXCEPT {1}", Precedence.OR + 1);
         add(JPQLNextOps.SET_EXCEPT_ALL, "{0} EXCEPT ALL {1}", Precedence.OR + 1);
+
+        add(JPQLNextOps.BIND, "{0}");
     }
 }

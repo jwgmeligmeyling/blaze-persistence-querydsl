@@ -1,33 +1,30 @@
 package com.pallasathenagroup.querydsl;
 
-import com.pallasathenagroup.querydsl.experimental.BindBuilder;
+import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.EntityPath;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.MapExpression;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.Path;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.jpa.JPQLQuery;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 @SuppressWarnings("unused")
 public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends JPQLQuery<T> {
 
+    <X> Q with(Path<X> alias, SubQueryExpression<X> o);
+
+    <X> Q withRecursive(Path<X> alias, SubQueryExpression<X> o);
+
     WithBuilder<Q> with(EntityPath<?> alias, Path<?>... columns);
 
     WithBuilder<Q> withRecursive(EntityPath<?> alias, Path<?>... columns);
-
-    @SuppressWarnings("unchecked")
-    default BindBuilder<T, Q> with(EntityPath<?> alias) {
-        return new BindBuilder<>((Q) this, alias, false);
-    }
-
-    @SuppressWarnings("unchecked")
-    default BindBuilder<T, Q> withRecursive(EntityPath<?> alias) {
-        return new BindBuilder<>((Q) this, alias, true);
-    }
 
     <X> Q fromValues(EntityPath<X> path, Collection<X> elements);
 
@@ -55,8 +52,32 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @return the current object
      */
     <X> Q leftJoin(SubQueryExpression<X> o, Path<X> alias);
+
+    /**
+     * Adds a right join to the given target
+     *
+     * @param o subquery
+     * @param alias alias
+     * @return the current object
+     */
     <X> Q rightJoin(SubQueryExpression<X> o, Path<X> alias);
+
+    /**
+     * Adds a full join to the given target
+     *
+     * @param o subquery
+     * @param alias alias
+     * @return the current object
+     */
     <X> Q fullJoin(SubQueryExpression<X> o, Path<X> alias);
+
+    /**
+     * Adds a inner join to the given target
+     *
+     * @param o subquery
+     * @param alias alias
+     * @return the current object
+     */
     <X> Q innerJoin(SubQueryExpression<X> o, Path<X> alias);
 
     /**
@@ -66,11 +87,9 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @param sq subqueries
      * @return union
      */
-    @SuppressWarnings("unchecked")
-    default <RT> SetOperation<RT> union(SubQueryExpression<RT>... sq) {
-        return union(Arrays.asList(sq));
-    }
-    
+    <RT> SetExpression<RT> union(List<SubQueryExpression<RT>> sq);
+
+
     /**
      * Creates an union expression for the given subqueries
      *
@@ -78,29 +97,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @param sq subqueries
      * @return union
      */
-    <RT> SetOperation<RT> union(List<SubQueryExpression<RT>> sq);
-    
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    @SuppressWarnings({"unchecked"})
-    default <RT> SetOperation<RT> unionAll(SubQueryExpression<RT>... sq) {
-        return unionAll(Arrays.asList(sq));
-    }
-    
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    <RT> SetOperation<RT> unionAll(List<SubQueryExpression<RT>> sq);
-    
+    <RT> SetExpression<RT> unionAll(List<SubQueryExpression<RT>> sq);
     /**
      * Creates an intersect expression for the given subqueries
      *
@@ -108,10 +105,8 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @param sq subqueries
      * @return union
      */
-    @SuppressWarnings({"unchecked"})
-    default <RT> SetOperation<RT> intersect(SubQueryExpression<RT>... sq) {
-        return intersect(Arrays.asList(sq));
-    }
+    <RT> SetExpression<RT> intersect(List<SubQueryExpression<RT>> sq);
+
 
     /**
      * Creates an intersect expression for the given subqueries
@@ -120,72 +115,146 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @param sq subqueries
      * @return union
      */
-    <RT> SetOperation<RT> intersect(List<SubQueryExpression<RT>> sq);
-    
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    @SuppressWarnings({"unchecked"})
-    default <RT> SetOperation<RT> intersectAll(SubQueryExpression<RT>... sq) {
-        return intersectAll(Arrays.asList(sq));
-    }
-    
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    <RT> SetOperation<RT> intersectAll(List<SubQueryExpression<RT>> sq);
-    
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    @SuppressWarnings({"unchecked"})
-    default <RT> SetOperation<RT> except(SubQueryExpression<RT>... sq) {
-        return except(Arrays.asList(sq));
-    }
-        
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    <RT> SetOperation<RT> except(List<SubQueryExpression<RT>> sq);
-    
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    @SuppressWarnings({"unchecked"})
-    default <RT> SetOperation<RT> exceptAll(SubQueryExpression<RT>... sq) {
-        return exceptAll(Arrays.asList(sq));
-    }
-    
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
-    <RT> SetOperation<RT> exceptAll(List<SubQueryExpression<RT>> sq);
+    <RT> SetExpression<RT> intersectAll(List<SubQueryExpression<RT>> sq);
 
-    Q union();
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    <RT> SetExpression<RT> except(List<SubQueryExpression<RT>> sq);
+
+    /**
+     * Creates an except expression for the given subqueries
+     *
+     * @param <RT> union subquery result
+     * @param sq subqueries
+     * @return union
+     */
+    <RT> SetExpression<RT> exceptAll(List<SubQueryExpression<RT>> sq);
+
+    /**
+     * Mark the last join as a lateral join
+     * @return this query
+     */
+    Q lateral();
 
 
+    // Covariant Overrides
+
+    @Override
+    Q from(EntityPath<?>... sources);
+
+    @Override
+    <P> Q from(CollectionExpression<?,P> target, Path<P> alias);
+
+    @Override
+    <P> Q innerJoin(EntityPath<P> target);
+
+    @Override
+    <P> Q innerJoin(EntityPath<P> target, Path<P> alias);
+
+    @Override
+    <P> Q innerJoin(CollectionExpression<?, P> target);
+
+    @Override
+    <P> Q innerJoin(CollectionExpression<?,P> target, Path<P> alias);
+
+    @Override
+    <P> Q innerJoin(MapExpression<?, P> target);
+
+    @Override
+    <P> Q innerJoin(MapExpression<?, P> target, Path<P> alias);
+
+    @Override
+    <P> Q join(EntityPath<P> target);
+
+    @Override
+    <P> Q join(EntityPath<P> target, Path<P> alias);
+
+    @Override
+    <P> Q join(CollectionExpression<?,P> target);
+
+    @Override
+    <P> Q join(CollectionExpression<?,P> target, Path<P> alias);
+
+    @Override
+    <P> Q join(MapExpression<?, P> target);
+
+    @Override
+    <P> Q join(MapExpression<?, P> target, Path<P> alias);
+
+    @Override
+    <P> Q leftJoin(EntityPath<P> target);
+
+    @Override
+    <P> Q leftJoin(EntityPath<P> target, Path<P> alias);
+
+    @Override
+    <P> Q leftJoin(CollectionExpression<?,P> target);
+
+    @Override
+    <P> Q leftJoin(CollectionExpression<?,P> target, Path<P> alias);
+
+    @Override
+    <P> Q leftJoin(MapExpression<?, P> target);
+
+    @Override
+    <P> Q leftJoin(MapExpression<?, P> target, Path<P> alias);
+
+    @Override
+    <P> Q rightJoin(EntityPath<P> target);
+
+    @Override
+    <P> Q rightJoin(EntityPath<P> target, Path<P> alias);
+
+    @Override
+    <P> Q rightJoin(CollectionExpression<?,P> target);
+
+    @Override
+    <P> Q rightJoin(CollectionExpression<?,P> target, Path<P> alias);
+
+    @Override
+    <P> Q rightJoin(MapExpression<?, P> target);
+
+    @Override
+    <P> Q rightJoin(MapExpression<?, P> target, Path<P> alias);
+
+    @Override
+    Q on(Predicate... condition);
+
+    @Override
+    Q fetchJoin();
+
+    @Override
+    Q fetchAll();
+
+    @Override
+    Q groupBy(Expression<?>... expressions);
+
+    @Override
+    Q having(Predicate... predicates);
+
+    @Override
+    Q limit(long l);
+
+    @Override
+    Q offset(long l);
+
+    @Override
+    Q restrict(QueryModifiers queryModifiers);
+
+    @Override
+    Q orderBy(OrderSpecifier<?>... orderSpecifiers);
+
+    @Override
+    <T> Q set(ParamExpression<T> paramExpression, T t);
+
+    @Override
+    Q distinct();
+
+    @Override
+    Q where(Predicate... predicates);
 }

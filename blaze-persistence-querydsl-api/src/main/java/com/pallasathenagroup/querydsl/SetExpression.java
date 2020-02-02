@@ -6,7 +6,7 @@ import com.querydsl.core.types.SubQueryExpression;
 
 import javax.annotation.Nonnegative;
 
-public interface SetOperation<RT> extends SubQueryExpression<RT>, Fetchable<RT>, ExtendedFetchable<RT> {
+public interface SetExpression<RT> extends SubQueryExpression<RT>, Fetchable<RT>, ExtendedFetchable<RT> {
 
 
     /**
@@ -15,7 +15,7 @@ public interface SetOperation<RT> extends SubQueryExpression<RT>, Fetchable<RT>,
      * @param limit max rows
      * @return the current object
      */
-    SetOperation<RT> limit(@Nonnegative long limit);
+    SetExpression<RT> limit(@Nonnegative long limit);
 
     /**
      * Set the offset for the query results
@@ -23,7 +23,7 @@ public interface SetOperation<RT> extends SubQueryExpression<RT>, Fetchable<RT>,
      * @param offset row offset
      * @return the current object
      */
-    SetOperation<RT> offset(@Nonnegative long offset);
+    SetExpression<RT> offset(@Nonnegative long offset);
 
 
     /**
@@ -32,6 +32,6 @@ public interface SetOperation<RT> extends SubQueryExpression<RT>, Fetchable<RT>,
      * @param o order
      * @return the current object
      */
-    SetOperation<RT> orderBy(OrderSpecifier<?>... o);
+    SetExpression<RT> orderBy(OrderSpecifier<?>... o);
 
 }

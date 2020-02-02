@@ -1,7 +1,6 @@
 package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilderFactory;
-import com.querydsl.core.JoinFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
@@ -62,14 +61,6 @@ public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>>
         @SuppressWarnings("unchecked") // This is the new type
                 BlazeJPAQuery<Tuple> newType = (BlazeJPAQuery<Tuple>) this;
         return newType;
-    }
-
-    @Override
-    public BlazeJPAQuery<T> union() {
-        BlazeJPAQuery<T> query = new BlazeJPAQuery<>(entityManager, getTemplates(), getMetadata(), criteriaBuilderFactory);
-        query.cachable = this.cachable;
-        query.union = SetUtils.union(this, query);
-        return query;
     }
 
 }
