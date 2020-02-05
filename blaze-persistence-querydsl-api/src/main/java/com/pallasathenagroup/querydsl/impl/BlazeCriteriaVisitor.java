@@ -34,7 +34,6 @@ import com.blazebit.persistence.parser.EntityMetamodel;
 import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
 import com.blazebit.persistence.spi.ExtendedAttribute;
 import com.blazebit.persistence.spi.ExtendedManagedType;
-import com.google.common.collect.ImmutableList;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
@@ -520,7 +519,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         if (expr instanceof FactoryExpression) {
             return ((FactoryExpression<?>) expr).getArgs();
         } else {
-            return ImmutableList.of(expr);
+            return Collections.singletonList(expr);
         }
     }
 

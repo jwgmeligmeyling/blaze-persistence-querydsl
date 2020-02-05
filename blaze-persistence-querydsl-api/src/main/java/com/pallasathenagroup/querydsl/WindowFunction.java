@@ -90,7 +90,7 @@ public class WindowFunction<A> extends MutableExpressionBase<A> {
                     builder.append(" ");
                 }
                 builder.append(ORDER_BY);
-                builder.append("{" + size + "}");
+                builder.append("{").append(size).append("}");
                 args.add(ExpressionUtils.orderBy(orderBy));
                 size++;
             }
@@ -100,7 +100,7 @@ public class WindowFunction<A> extends MutableExpressionBase<A> {
                 size += rowsOrRangeArgs.size();
             }
             builder.append(")");
-            value = Expressions.template(target.getType(), builder.toString(), args.build());
+            value = Expressions.template(target.getType(), builder.toString(), (List<Expression<?>>) args.build());
         }
         return value;
     }

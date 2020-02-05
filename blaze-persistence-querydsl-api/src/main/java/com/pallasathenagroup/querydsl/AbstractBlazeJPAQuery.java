@@ -127,14 +127,12 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     // TODO @Override
     @SuppressWarnings("unchecked")
     protected Query createQuery(@Nullable QueryModifiers modifiers, boolean forCount) {
-        Queryable<T, ?> criteriaBuilder = getCriteriaBuilder(modifiers);
+        Queryable<T, ?> criteriaBuilder = getQueryable(modifiers);
 
         if (forCount) {
             return ((FullQueryBuilder<T, ?>) criteriaBuilder).getCountQuery();
         }
 
-        String queryString = criteriaBuilder.getQueryString();
-        System.out.println(queryString);
         TypedQuery<T> query = criteriaBuilder.getQuery();
 
         if (lockMode != null) {
@@ -154,7 +152,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     @Override
     @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(int firstResult, int maxResults) {
-        return ((FullQueryBuilder<T,?>) getCriteriaBuilder(getMetadata().getModifiers()))
+        return ((FullQueryBuilder<T,?>) getQueryable(getMetadata().getModifiers()))
                 .page(firstResult, maxResults)
                 .getResultList();
     }
@@ -162,16 +160,16 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     @Override
     @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
-        return ((FullQueryBuilder<T,?>) getCriteriaBuilder(getMetadata().getModifiers()))
+        return ((FullQueryBuilder<T,?>) getQueryable(getMetadata().getModifiers()))
                 .page(keysetPage, firstResult, maxResults)
                 .getResultList();
     }
 
     public String getQueryString() {
-        return getCriteriaBuilder(null).getQueryString();
+        return getQueryable(null).getQueryString();
     }
 
-    protected Queryable<T, ?> getCriteriaBuilder(@Nullable QueryModifiers modifiers) {
+    protected Queryable<T, ?> getQueryable(@Nullable QueryModifiers modifiers) {
         BlazeCriteriaVisitor<T> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, getTemplates());
         blazeCriteriaVisitor.serialize(this);
         CriteriaBuilder<T> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
@@ -325,11 +323,13 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
+    @SuppressWarnings({"unchecked","rawtypes"})
     public <X> Q from(SubQueryExpression<X> subQueryExpression, Path<X> alias) {
         return (Q) queryMixin.from(ExpressionUtils.as((Expression) subQueryExpression, alias));
     }
 
     @Override
+    @SuppressWarnings({"unchecked","rawtypes"})
     public <X> Q leftJoin(SubQueryExpression<X> o, Path<X> alias) {
         return (Q) queryMixin.leftJoin((Expression) o, alias);
     }
@@ -340,16 +340,19 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
+    @SuppressWarnings({"unchecked","rawtypes"})
     public <X> Q rightJoin(SubQueryExpression<X> o, Path<X> alias) {
         return (Q) queryMixin.rightJoin((Expression) o, alias);
     }
 
     @Override
+    @SuppressWarnings({"unchecked","rawtypes"})
     public <X> Q fullJoin(SubQueryExpression<X> o, Path<X> alias) {
         return (Q) queryMixin.fullJoin((Expression) o, alias);
     }
 
     @Override
+    @SuppressWarnings({"unchecked","rawtypes"})
     public <X> Q innerJoin(SubQueryExpression<X> o, Path<X> alias) {
         return (Q) queryMixin.innerJoin((Expression) o, alias);
     }
@@ -479,11 +482,12 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     private CTEUtils.Binds<T> binds = new CTEUtils.Binds<>();
 
     /**
+     * Bind a CTE attribute to a select expression.
      *
-     * @param path
-     * @param expression
-     * @param <U>
-     * @return
+     * @param path Attribute path
+     * @param expression Expression to bind the path to
+     * @param <U> Attribute type
+     * @return this query
      * @deprecated Fluent API proof of concept
      */
     @Deprecated

@@ -102,7 +102,7 @@ public class WindowFirstLast<T> extends MutableExpressionBase<T> {
             builder.append("{1}");
             args.add(ExpressionUtils.orderBy(orderBy));
             builder.append(")");
-            value = Expressions.template(target.getType(), builder.toString(), args.build());
+            value = Expressions.template(target.getType(), builder.toString(), (List<Expression<?>>) args.build());
         }
         return value;
     }

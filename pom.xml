@@ -3,11 +3,26 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>org.example</groupId>
     <artifactId>blaze-persistence-querydsl</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
+    <developers>
+        <developer>
+            <name>Jan-Willem Gmelig Meyling</name>
+            <email>jan-willem@youngmediaexperts.nl</email>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/jwgmeligmeyling/blaze-persistence-querydsl.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:jwgmeligmeyling/blaze-persistence-querydsl.git</developerConnection>
+        <url>https://github.com/jwgmeligmeyling/blaze-persistence-querydsl</url>
+        <tag>HEAD</tag>
+    </scm>
+    <ciManagement>
+        <system>github</system>
+        <url>https://github.com/jwgmeligmeyling/blaze-persistence-querydsl/actions</url>
+    </ciManagement>
     <modules>
         <module>blaze-persistence-querydsl-api</module>
         <module>blaze-persistence-querydsl-impl</module>
@@ -18,7 +33,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <querydsl.version>4.2.3-SNAPSHOT</querydsl.version>
+        <querydsl.version>4.2.2</querydsl.version>
         <hibernate.version>5.4.10.Final</hibernate.version>
         <blaze-persistence.version>1.4.1</blaze-persistence.version>
     </properties>

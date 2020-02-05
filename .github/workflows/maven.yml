@@ -1,0 +1,42 @@
+name: Java CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@master
+        with:
+          clean: true
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Build with Maven
+        env:
+          T_POSTGRES_USER: postgres
+          T_POSTGRES_DB: test
+          T_POSTGRES_PASSWORD: mysecretpassword
+          T_POSTGRES_HOST: localhost
+          T_POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          MAVEN_OPTS: '-Xmx1536m -XX:+TieredCompilation -XX:TieredStopAtLevel=1'
+        run: mvn -B clean verify -P postgresql -Djdbc.url="jdbc:postgresql://localhost:$T_POSTGRES_PORT/test"
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432/tcp
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+          POSTGRES_PASSWORD: mysecretpassword

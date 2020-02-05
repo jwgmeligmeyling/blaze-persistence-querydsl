@@ -20,7 +20,6 @@ import com.querydsl.core.types.dsl.Param;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,6 +42,8 @@ import static com.pallasathenagroup.querydsl.WindowExpressions.lastValue;
 import static com.pallasathenagroup.querydsl.WindowExpressions.rowNumber;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static com.querydsl.jpa.JPAExpressions.selectFrom;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 public class BasicQueryTest extends AbstractCoreTest {
 
@@ -91,7 +92,7 @@ public class BasicQueryTest extends AbstractCoreTest {
             blazeCriteriaVisitor.serialize(query.getMetadata(), false, null);
             CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
             List<Tuple> fetch = criteriaBuilder.getResultList();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -103,7 +104,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .where(testEntity.field.length().gt(1));
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -118,14 +119,14 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .set(param, 1);
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
     @Test
     public void testParameterExpressionInSelect() {
         doInJPA(entityManager -> {
-            Param<Integer> param = new Param<Integer>(Integer.class, "theSuperName");
+            Param<Integer> param = new Param<>(Integer.class, "theSuperName");
 
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), param)
@@ -133,7 +134,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .set(param, 1);
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -146,7 +147,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -159,7 +160,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -173,7 +174,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .where(testEntity.id.in(select(sub.id).from(sub).where(sub.id.in(select(sub2.id).from(sub2).where(sub2.id.eq(sub.id)))).limit(5)));
 
             List<Tuple> fetch = query.fetch();
-            Assert.assertFalse(fetch.isEmpty());
+            assertFalse(fetch.isEmpty());
         });
     }
 
@@ -186,7 +187,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .transform(GroupBy.groupBy(testEntity.id).as(testEntity.field));
 
             testEntity.getRoot();
-            Assert.assertFalse(blep.isEmpty());
+            assertFalse(blep.isEmpty());
         });
     }
 
@@ -197,6 +198,8 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .from(author)
                     .innerJoin(author.books, book)
                     .transform(GroupBy.groupBy(author).as(GroupBy.list(book)));
+
+            assertNotNull(booksByAuthor);
         });
     }
 
@@ -209,6 +212,8 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .from(otherAuthor)
                     .innerJoin(otherBook).on(otherBook.author.eq(otherAuthor))
                     .transform(GroupBy.groupBy(otherAuthor).as(GroupBy.list(otherBook)));
+
+            assertNotNull(booksByAuthor);
         });
     }
 
@@ -225,7 +230,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .select(book)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
@@ -245,8 +250,6 @@ public class BasicQueryTest extends AbstractCoreTest {
         });
 
         doInJPA(entityManager -> {
-
-
             List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .union(select(book).from(book).where(book.id.eq(1337L)),
                         new BlazeJPAQuery<TestEntity>().intersect(
@@ -258,7 +261,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                             )
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
@@ -304,46 +307,43 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .from(book2).where(book2.id.in(union))
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
     @Test
     public void testCTE() {
         doInJPA(entityManager -> {
-
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(select(book.id, book.name).from(book))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
     @Test
     public void testCTEWithBinds() {
         doInJPA(entityManager -> {
-
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte, select(new CTEUtils.Binds<IdHolderCte>().bind(idHolderCte.id, book.id).bind(idHolderCte.name, book.name)).from(book))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
     @Test
     public void testCTEUnion() {
         doInJPA(entityManager -> {
-
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book), intersect(select(book.id, book.name).from(book), select(book.id, book.name).from(book))))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
@@ -363,7 +363,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
@@ -376,14 +376,13 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
     @Test
     public void testRecursiveBindBuilder() {
         doInJPA(entityManager -> {
-
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name)
                         .as(new BlazeJPAQuery<>().unionAll(
@@ -392,7 +391,7 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
-            System.out.println(fetch);
+            assertNotNull(fetch);
         });
     }
 
@@ -401,14 +400,16 @@ public class BasicQueryTest extends AbstractCoreTest {
         doInJPA(entityManager -> {
             QRecursiveEntity recursiveEntity = new QRecursiveEntity("t");
 
-            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+            List<RecursiveEntity> fetch = new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
                     .select(recursiveEntity)
                     .from(select(recursiveEntity)
-                        .from(recursiveEntity)
-                        .where(recursiveEntity.parent.name.eq("root1"))
-                        .orderBy(recursiveEntity.name.asc())
-                        .limit(1L), recursiveEntity)
-                        .fetch();
+                            .from(recursiveEntity)
+                            .where(recursiveEntity.parent.name.eq("root1"))
+                            .orderBy(recursiveEntity.name.asc())
+                            .limit(1L), recursiveEntity)
+                    .fetch();
+
+            assertNotNull(fetch);
 
         });
     }
@@ -420,7 +421,7 @@ public class BasicQueryTest extends AbstractCoreTest {
             QRecursiveEntity subT = new QRecursiveEntity("subT");
             QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
 
-            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+            List<RecursiveEntity> fetch = new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
                     .select(t)
                     .from(new BlazeJPAQuery<RecursiveEntity>().select(t).from(t)
                             .leftJoin(selectFrom(subT).where(subT.parent.name.eq("root1")).orderBy(subT.name.asc()).limit(1), subT)
@@ -429,11 +430,13 @@ public class BasicQueryTest extends AbstractCoreTest {
                             .orderBy(t.name.asc())
                             .limit(1L), t)
                     .leftJoin(selectFrom(subT2)
-                        .where(subT2.parent.name.eq("root1"))
-                        .orderBy(subT2.name.asc())
-                        .limit(1), subT2)
-                        .on(t.eq(subT2))
+                            .where(subT2.parent.name.eq("root1"))
+                            .orderBy(subT2.name.asc())
+                            .limit(1), subT2)
+                    .on(t.eq(subT2))
                     .fetch();
+
+            assertNotNull(fetch);
 
         });
     }
@@ -472,14 +475,15 @@ public class BasicQueryTest extends AbstractCoreTest {
             QRecursiveEntity t = new QRecursiveEntity("t");
             QRecursiveEntity subT = new QRecursiveEntity("subT");
             QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-            QRecursiveEntity subT3 = new QRecursiveEntity("subT3");
 
-            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+            List<Tuple> fetch = new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
                     .select(t, subT2)
                     .from(t)
                     .leftJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
                     .lateral()
                     .fetch();
+
+            assertNotNull(fetch);
         });
     }
 
@@ -490,17 +494,18 @@ public class BasicQueryTest extends AbstractCoreTest {
             QRecursiveEntity t = new QRecursiveEntity("t");
             QRecursiveEntity subT = new QRecursiveEntity("subT");
             QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-            QRecursiveEntity subT3 = new QRecursiveEntity("subT3");
 
-            new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
+            List<Tuple> fetch = new BlazeJPAQuery<RecursiveEntity>(entityManager, cbf)
                     .with(idHolderCte, idHolderCte.id, idHolderCte.name)
-                            .as(select(book.id, book.name).from(book).where(book.id.eq(1L)))
+                    .as(select(book.id, book.name).from(book).where(book.id.eq(1L)))
                     .select(t, subT2)
                     .from(t)
                     .leftJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
                     .where(t.id.in(select(idHolderCte.id).from(idHolderCte)))
                     .lateral()
                     .fetch();
+
+            assertNotNull(fetch);
         });
     }
 

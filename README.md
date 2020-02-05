@@ -7,15 +7,20 @@ Extensions for creating [Blaze-Persistence](https://github.com/Blazebit/blaze-pe
 
 This is a proof of concept for a QueryDSL wrapper for Blaze-Persistence. It currently supports the following:
 
-* CTE's and Recursive CTE's
+* CTE's and recursive CTE's
+* Subquery joins
+* Lateral joins
 * Values clauses
 * Window functions
 * `group_agg` support
 * Utility methods for date/time
+* Set operations (`UNION`, `INTERSECT` and `EXCEPT`)
 
 Features for future consideration:
 
-* Set operation support
+* Fluent builders for CTE's and set operations
+* Attribute values clauses
+* Named window support
 
 This wrapper executes QueryDSL queries through Blaze-Persistence's CriteriaBuilder API and benefits from the strong Blaze-Persistence query benefits.
 
