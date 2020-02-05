@@ -1,5 +1,6 @@
 Blaze-Persistence extensions for QueryDSL
 ======
+![Java CI](https://github.com/jwgmeligmeyling/blaze-persistence-querydsl/workflows/Java%20CI/badge.svg)
 
 Extensions for creating [Blaze-Persistence](https://github.com/Blazebit/blaze-persistence) queries using QueryDSL 4.
 
