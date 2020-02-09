@@ -9,6 +9,7 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
+import com.pallasathenagroup.querydsl.impl.CriteriaBuilderImpl;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -114,6 +115,21 @@ public class UnionTests extends AbstractCoreTest {
 
                 assertEquals(expectedQueryString, queryString);
 
+            });
+        }
+
+        @Test
+        public void testFluent() {
+            doInJPA(entityManager -> {
+                CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
+-
+                String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(1337L))
+                        .union()
+                        .select(book).from(book).where(book.id.gt(1337L))
+                        .endSet()
+                        .getQueryString();
+
+                System.out.println(queryString);
             });
         }
 
