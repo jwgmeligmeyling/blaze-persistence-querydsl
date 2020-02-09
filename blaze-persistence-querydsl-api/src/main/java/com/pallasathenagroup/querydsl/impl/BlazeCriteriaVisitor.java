@@ -1,5 +1,6 @@
 package com.pallasathenagroup.querydsl.impl;
 
+import com.blazebit.persistence.BaseOngoingFinalSetOperationBuilder;
 import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
@@ -19,6 +20,7 @@ import com.blazebit.persistence.JoinType;
 import com.blazebit.persistence.LimitBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
+import com.blazebit.persistence.OngoingSetOperationBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
 import com.blazebit.persistence.Queryable;
@@ -180,7 +182,11 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                         break;
                 }
                 setBuilder = setOperation.getArg(1).accept(this, setBuilder);
-                if (isNestedSet) return ((BaseOngoingSetOperationBuilder<?, ?, ?>) setBuilder).endSet();
+                if (isNestedSet) {
+                    OngoingSetOperationBuilder<?, ?, ?> setBuilder1 = (OngoingSetOperationBuilder<?, ?, ?>) setBuilder;
+                    BaseOngoingFinalSetOperationBuilder<?, ?> baseOngoingFinalSetOperationBuilder = setBuilder1.endSetWith();
+                    return baseOngoingFinalSetOperationBuilder.endSet();
+                }
                 return setBuilder;
             }
 
@@ -394,7 +400,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private void renderConstants(ParameterHolder<?> criteriaBuilder) {
         for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
-            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+            try {
+                criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+            }
+            catch (Exception e) {
+                throw e;
+            }
         }
     }
 
