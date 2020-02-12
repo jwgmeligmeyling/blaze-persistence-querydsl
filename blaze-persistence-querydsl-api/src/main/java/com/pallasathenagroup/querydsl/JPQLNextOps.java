@@ -2,6 +2,13 @@ package com.pallasathenagroup.querydsl;
 
 import com.querydsl.core.types.Operator;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Calendar;
+
 public enum JPQLNextOps implements Operator {
     PAGE_POSITION(Long.class),
     ENTITY_FUNCTION(Object.class),
@@ -31,7 +38,39 @@ public enum JPQLNextOps implements Operator {
     WITH_ALIAS(Object.class),
     WITH_COLUMNS(Object.class),
     WITH_RECURSIVE_COLUMNS(Object.class),
-    BIND(Object.class);
+    BIND(Object.class),
+    CAST_BOOLEAN(Boolean.class),
+    CAST_BYTE(Byte.class),
+    CAST_SHORT(Short.class),
+    CAST_LONG(Long.class),
+    CAST_INTEGER(Integer.class),
+    CAST_FLOAT(Float.class),
+    CAST_DOUBLE(Double.class),
+    CAST_CHARACTER(Character.class),
+    CAST_STRING(String.class),
+    CAST_BIGINTEGER(BigInteger.class),
+    CAST_BIGDECIMAL(BigDecimal.class),
+    CAST_TIME(Time.class),
+    CAST_DATE(Date.class),
+    CAST_TIMESTAMP(Timestamp.class),
+    CAST_CALENDAR(Calendar.class),
+    TREAT_BOOLEAN(Boolean.class),
+    TREAT_BYTE(Byte.class),
+    TREAT_SHORT(Short.class),
+    TREAT_LONG(Long.class),
+    TREAT_INTEGER(Integer.class),
+    TREAT_FLOAT(Float.class),
+    TREAT_DOUBLE(Double.class),
+    TREAT_CHARACTER(Character.class),
+    TREAT_STRING(String.class),
+    TREAT_BIGINTEGER(BigInteger.class),
+    TREAT_BIGDECIMAL(BigDecimal.class),
+    TREAT_TIME(Time.class),
+    TREAT_DATE(Date.class),
+    TREAT_TIMESTAMP(Timestamp.class),
+    TREAT_CALENDAR(Calendar.class),
+
+    ;
 
     private final Class<?> type;
 

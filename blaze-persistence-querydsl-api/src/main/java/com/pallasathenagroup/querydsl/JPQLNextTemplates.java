@@ -79,6 +79,43 @@ public class JPQLNextTemplates extends JPQLTemplates {
         add(JPQLNextOps.SET_EXCEPT, "{0} EXCEPT {1}", Precedence.OR + 1);
         add(JPQLNextOps.SET_EXCEPT_ALL, "{0} EXCEPT ALL {1}", Precedence.OR + 1);
 
+        add(JPQLNextOps.CAST_BOOLEAN, "CAST_BOOLEAN({0})");
+        add(JPQLNextOps.CAST_BYTE, "CAST_BYTE({0})");
+        add(JPQLNextOps.CAST_SHORT, "CAST_SHORT({0})");
+        add(JPQLNextOps.CAST_LONG, "CAST_LONG({0})");
+        add(JPQLNextOps.CAST_INTEGER, "CAST_INTEGER({0})");
+        add(JPQLNextOps.CAST_FLOAT, "CAST_FLOAT({0})");
+        add(JPQLNextOps.CAST_DOUBLE, "CAST_DOUBLE({0})");
+        add(JPQLNextOps.CAST_CHARACTER, "CAST_CHARACTER({0})");
+        add(JPQLNextOps.CAST_STRING, "CAST_STRING({0})");
+        add(JPQLNextOps.CAST_BIGINTEGER, "CAST_BIGINTEGER({0})");
+        add(JPQLNextOps.CAST_BIGDECIMAL, "CAST_BIGDECIMAL({0})");
+        add(JPQLNextOps.CAST_TIME, "CAST_TIME({0})");
+        add(JPQLNextOps.CAST_DATE, "CAST_BOOLEAN({0})");
+        add(JPQLNextOps.CAST_TIMESTAMP, "CAST_TIMESTAMP({0})");
+        add(JPQLNextOps.CAST_CALENDAR, "CAST_CALENDAR({0})");
+
+        add(JPQLNextOps.TREAT_BOOLEAN, "TREAT_BOOLEAN({0})");
+        add(JPQLNextOps.TREAT_BYTE, "TREAT_BYTE({0})");
+        add(JPQLNextOps.TREAT_SHORT, "TREAT_SHORT({0})");
+        add(JPQLNextOps.TREAT_LONG, "TREAT_LONG({0})");
+        add(JPQLNextOps.TREAT_INTEGER, "TREAT_INTEGER({0})");
+        add(JPQLNextOps.TREAT_FLOAT, "TREAT_FLOAT({0})");
+        add(JPQLNextOps.TREAT_DOUBLE, "TREAT_DOUBLE({0})");
+        add(JPQLNextOps.TREAT_CHARACTER, "TREAT_CHARACTER({0})");
+        add(JPQLNextOps.TREAT_STRING, "TREAT_STRING({0})");
+        add(JPQLNextOps.TREAT_BIGINTEGER, "TREAT_BIGINTEGER({0})");
+        add(JPQLNextOps.TREAT_BIGDECIMAL, "TREAT_BIGDECIMAL({0})");
+        add(JPQLNextOps.TREAT_TIME, "TREAT_TIME({0})");
+        add(JPQLNextOps.TREAT_DATE, "TREAT_BOOLEAN({0})");
+        add(JPQLNextOps.TREAT_TIMESTAMP, "TREAT_TIMESTAMP({0})");
+        add(JPQLNextOps.TREAT_CALENDAR, "TREAT_CALENDAR({0})");
+
+
+        add(JPQLNextOps.LEAST, "LEAST({0})");
+        add(JPQLNextOps.GREATEST, "GREATEST({0})");
+        add(JPQLNextOps.REPEAT, "REPEAT({0}, {1})");
+
         add(JPQLNextOps.BIND, "{0}");
     }
 }
