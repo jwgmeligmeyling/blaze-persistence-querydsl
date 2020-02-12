@@ -58,6 +58,11 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         this.criteriaBuilderFactory = criteriaBuilderFactory;
     }
 
+    @Override
+    protected BlazeCriteriaVisitor<T> createSerializer() {
+        return new BlazeCriteriaVisitor<T>(criteriaBuilderFactory, entityManager, getTemplates());
+    }
+
     public AbstractBlazeJPAQuery(EntityManager em, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
         super(em, JPQLNextTemplates.DEFAULT, metadata);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
@@ -165,13 +170,24 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
                 .getResultList();
     }
 
+    @Override
+    protected BlazeCriteriaVisitor<T> serialize(boolean forCountRow, boolean validate) {
+        if (validate) {
+            if (queryMixin.getMetadata().getJoins().isEmpty()) {
+                throw new IllegalArgumentException("No sources given");
+            }
+        }
+        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = createSerializer();
+        blazeCriteriaVisitor.serialize(this);
+        return blazeCriteriaVisitor;
+    }
+
     public String getQueryString() {
         return getQueryable(null).getQueryString();
     }
 
     protected Queryable<T, ?> getQueryable(@Nullable QueryModifiers modifiers) {
-        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(criteriaBuilderFactory, entityManager, getTemplates());
-        blazeCriteriaVisitor.serialize(this);
+        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = serialize(false, false);
         CriteriaBuilder<T> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
 
         if (modifiers != null) {
@@ -362,6 +378,11 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     public Q setCacheable(boolean cacheable) {
         this.cachable = cacheable;
         return queryMixin.getSelf();
+    }
+
+    @Override
+    public String toString() {
+        return getQueryable(null).getQueryString();
     }
 
     // Union stuff

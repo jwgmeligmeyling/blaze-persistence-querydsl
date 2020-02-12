@@ -99,4 +99,8 @@ public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> impleme
         return query.getQueryString();
     }
 
+    @Override
+    public String toString() {
+        return query.toString();
+    }
 }
