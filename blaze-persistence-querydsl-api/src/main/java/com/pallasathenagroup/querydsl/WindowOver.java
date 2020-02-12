@@ -53,4 +53,8 @@ public class WindowOver<T> extends SimpleOperation<T> {
         return new WindowFunction<T>(this);
     }
 
+    public WindowFunction<T> over(NamedWindow baseWindow) {
+        return new WindowFunction<T>(this, baseWindow.getAlias());
+    }
+
 }

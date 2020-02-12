@@ -257,4 +257,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
 
     @Override
     Q where(Predicate... predicates);
+
+    Q window(NamedWindow namedWindow);
+
 }

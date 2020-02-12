@@ -165,6 +165,23 @@ public class BasicQueryTest extends AbstractCoreTest {
     }
 
     @Test
+    public void testNamedWindowFunction() {
+        doInJPA(entityManager -> {
+            QTestEntity sub = new QTestEntity("sub");
+
+            NamedWindow blep = new NamedWindow("whihi").partitionBy(testEntity.id);
+
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
+                    .window(blep)
+                    .select(testEntity.field.as("blep"), rowNumber().over(blep), lastValue(testEntity.field).over(blep))
+                    .where(testEntity.id.in(select(sub.id).from(sub)));
+
+            List<Tuple> fetch = query.fetch();
+            assertFalse(fetch.isEmpty());
+        });
+    }
+
+    @Test
     public void testNestedSubQuery() {
         doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");

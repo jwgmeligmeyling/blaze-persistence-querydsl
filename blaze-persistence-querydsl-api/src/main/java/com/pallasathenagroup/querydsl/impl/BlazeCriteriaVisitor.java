@@ -30,12 +30,18 @@ import com.blazebit.persistence.SetOperationBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
+import com.blazebit.persistence.WindowBuilder;
+import com.blazebit.persistence.WindowFrameBetweenBuilder;
+import com.blazebit.persistence.WindowFrameBuilder;
+import com.blazebit.persistence.WindowFrameExclusionBuilder;
 import com.blazebit.persistence.parser.EntityMetamodel;
+import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
 import com.blazebit.persistence.spi.ExtendedAttribute;
 import com.blazebit.persistence.spi.ExtendedManagedType;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.NamedWindow;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
 import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
@@ -303,7 +309,75 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 case WITH:
                     flag.accept(BlazeCriteriaVisitor.this, null);
                     break;
+                case AFTER_HAVING:
+                    renderWindowFlag(queryFlag);
+
+                    break;
             }
+        }
+    }
+
+    private void renderWindowFlag(QueryFlag queryFlag) {
+        NamedWindow namedWindow = (NamedWindow) queryFlag.getFlag();
+        WindowBuilder<CriteriaBuilder<T>> window = criteriaBuilder.window(namedWindow.getAlias());
+
+        for (Expression<?> expression : namedWindow.getPartitionBy()) {
+            window.partitionBy(renderExpression(expression));
+        }
+
+        for (OrderSpecifier<?> orderSpecifier : namedWindow.getOrderBy()) {
+            renderOrderSpecifier(orderSpecifier, window);
+        }
+
+        if (namedWindow.getFrameMode() != null) {
+            WindowFrameBuilder<CriteriaBuilder<T>> windowFrameBuilder = namedWindow.getFrameMode().equals(WindowFrameMode.RANGE) ?
+                    window.range() : namedWindow.getFrameMode().equals(WindowFrameMode.ROWS) ?
+                    window.rows() : window.groups();
+
+            WindowFrameExclusionBuilder<CriteriaBuilder<T>> frameExclusionBuilder = null;
+
+            if (namedWindow.getFrameEndType() != null) {
+                WindowFrameBetweenBuilder<CriteriaBuilder<T>> betweenBuilder = null;
+                switch (namedWindow.getFrameStartType()) {
+                    case UNBOUNDED_PRECEDING:
+                        betweenBuilder = windowFrameBuilder.betweenUnboundedPreceding();
+                        break;
+                    case BOUNDED_PRECEDING:
+                        betweenBuilder = windowFrameBuilder.betweenPreceding(renderExpression(namedWindow.getFrameStartExpression()));
+                        break;
+                    case CURRENT_ROW:
+                        betweenBuilder = windowFrameBuilder.betweenCurrentRow();
+                        break;
+                }
+
+                switch (namedWindow.getFrameEndType()) {
+                    case CURRENT_ROW:
+                        frameExclusionBuilder = betweenBuilder.andCurrentRow();
+                        break;
+                    case UNBOUNDED_FOLLOWING:
+                        frameExclusionBuilder = betweenBuilder.andUnboundedFollowing();
+                        break;
+                    case BOUNDED_FOLLOWING:
+                        frameExclusionBuilder = betweenBuilder.andFollowing(renderExpression(namedWindow.getFrameEndExpression()));
+                        break;
+                }
+            } else {
+                switch (namedWindow.getFrameStartType()) {
+                    case UNBOUNDED_PRECEDING:
+                        frameExclusionBuilder = windowFrameBuilder.unboundedPreceding();
+                        break;
+                    case BOUNDED_PRECEDING:
+                        frameExclusionBuilder = windowFrameBuilder.preceding(renderExpression(namedWindow.getFrameStartExpression()));
+                        break;
+                    case CURRENT_ROW:
+                        frameExclusionBuilder = windowFrameBuilder.currentRow();
+                        break;
+                }
+            }
+
+            frameExclusionBuilder.end();
+        } else {
+            window.end();
         }
     }
 
