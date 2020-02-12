@@ -11,11 +11,19 @@ import java.util.Collection;
 public class ValuesExpression<T> implements Path<T> {
 
     private final Path<T> entityPath;
+    private final Path<T> alias;
     private final Collection<T> elements;
     private final boolean identifiable;
 
     public ValuesExpression(Path<T> entityPath, Collection<T> elements, boolean identifiable) {
+        this.entityPath = this.alias = entityPath;
+        this.elements = elements;
+        this.identifiable = identifiable;
+    }
+
+    public ValuesExpression(Path<T> entityPath, Path<T> alias, Collection<T> elements, boolean identifiable) {
         this.entityPath = entityPath;
+        this.alias = alias;
         this.elements = elements;
         this.identifiable = identifiable;
     }
@@ -54,4 +62,7 @@ public class ValuesExpression<T> implements Path<T> {
         return identifiable;
     }
 
+    public Path<T> getAlias() {
+        return alias;
+    }
 }

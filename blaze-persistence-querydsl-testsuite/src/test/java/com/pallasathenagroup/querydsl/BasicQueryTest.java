@@ -256,11 +256,12 @@ public class BasicQueryTest extends AbstractCoreTest {
     public void testFromValuesAttributes() {
         doInJPA(entityManager -> {
 
+            // TODO: Horrible API
+            StringPath bookName = new StringPath("bookName") {};
+
             List<String> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
-                    // TODO: Alias cannot be specified
-                    .fromValues(book.name, Collections.singleton("book"))
-                    // TODO: Horrible API
-                    .select(new StringPath("name") {})
+                    .fromValues(book.name, bookName, Collections.singleton("book"))
+                    .select(bookName)
                     .fetch();
 
             assertNotNull(fetch);

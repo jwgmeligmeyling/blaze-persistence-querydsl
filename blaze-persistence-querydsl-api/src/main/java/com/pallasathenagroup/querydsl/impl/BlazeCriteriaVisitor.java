@@ -453,7 +453,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             if (target instanceof ValuesExpression<?>) {
                 ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
                 Class type = valuesExpression.getRoot().getType();
-                String name = valuesExpression.getMetadata().getName();
+                String name = valuesExpression.getAlias().getMetadata().getName();
                 Collection<?> elements = valuesExpression.getElements();
 
                 if (! valuesExpression.getMetadata().isRoot()) {

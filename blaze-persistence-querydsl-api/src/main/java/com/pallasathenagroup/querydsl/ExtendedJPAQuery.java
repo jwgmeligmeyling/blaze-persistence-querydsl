@@ -26,9 +26,13 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
 
     WithBuilder<Q> withRecursive(EntityPath<?> alias, Path<?>... columns);
 
-    <X> Q fromValues(Path<X> path, Collection<X> elements);
+    <X> Q fromValues(EntityPath<X> path, Collection<X> elements);
 
-    <X> Q fromIdentifiableValues(Path<X> path, Collection<X> elements);
+    <X> Q fromIdentifiableValues(EntityPath<X> path, Collection<X> elements);
+
+    <X> Q fromValues(Path<X> path, Path<X> alias, Collection<X> elements);
+
+    <X> Q fromIdentifiableValues(Path<X> path, Path<X> alias, Collection<X> elements);
 
     <P> Q fullJoin(CollectionExpression<?,P> target);
 
