@@ -88,12 +88,12 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    public <X> Q fromValues(EntityPath<X> path, Collection<X> elements) {
+    public <X> Q fromValues(Path<X> path, Collection<X> elements) {
         return this.queryMixin.from(new ValuesExpression<>(path, elements, false));
     }
 
     @Override
-    public <X> Q fromIdentifiableValues(EntityPath<X> path, Collection<X> elements) {
+    public <X> Q fromIdentifiableValues(Path<X> path, Collection<X> elements) {
         return this.queryMixin.from(new ValuesExpression<>(path, elements, true));
     }
 

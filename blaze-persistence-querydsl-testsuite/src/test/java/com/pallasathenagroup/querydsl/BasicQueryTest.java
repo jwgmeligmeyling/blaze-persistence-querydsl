@@ -17,6 +17,7 @@ import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.dsl.Param;
+import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -245,6 +246,21 @@ public class BasicQueryTest extends AbstractCoreTest {
             List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .fromValues(book, Collections.singleton(theBook))
                     .select(book)
+                    .fetch();
+
+            assertNotNull(fetch);
+        });
+    }
+
+    @Test
+    public void testFromValuesAttributes() {
+        doInJPA(entityManager -> {
+
+            List<String> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
+                    // TODO: Alias cannot be specified
+                    .fromValues(book.name, Collections.singleton("book"))
+                    // TODO: Horrible API
+                    .select(new StringPath("name") {})
                     .fetch();
 
             assertNotNull(fetch);

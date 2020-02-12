@@ -452,10 +452,18 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
             if (target instanceof ValuesExpression<?>) {
                 ValuesExpression<?> valuesExpression = (ValuesExpression<?>) target;
-                Class type = valuesExpression.getType();
+                Class type = valuesExpression.getRoot().getType();
                 String name = valuesExpression.getMetadata().getName();
                 Collection<?> elements = valuesExpression.getElements();
-                if ( valuesExpression.isIdentifiable() ) {
+
+                if (! valuesExpression.getMetadata().isRoot()) {
+                    String attribute = relativePathString(valuesExpression.getRoot(), valuesExpression);
+                    if ( valuesExpression.isIdentifiable() ) {
+                        criteriaBuilder = (X) fromBuilder.fromIdentifiableValues(type, attribute, name, elements);
+                    } else {
+                        criteriaBuilder = (X) fromBuilder.fromValues(type, attribute, name, elements);
+                    }
+                } else if ( valuesExpression.isIdentifiable() ) {
                     criteriaBuilder = (X) fromBuilder.fromIdentifiableValues(type, name, elements);
                 } else {
                     criteriaBuilder = (X) fromBuilder.fromValues(type, name, elements);
