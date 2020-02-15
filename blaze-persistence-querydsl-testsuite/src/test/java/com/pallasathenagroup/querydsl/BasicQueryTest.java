@@ -16,6 +16,7 @@ import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.SubQueryExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Param;
 import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.JPQLQuery;
@@ -255,9 +256,7 @@ public class BasicQueryTest extends AbstractCoreTest {
     @Test
     public void testFromValuesAttributes() {
         doInJPA(entityManager -> {
-
-            // TODO: Horrible API
-            StringPath bookName = new StringPath("bookName") {};
+            StringPath bookName = Expressions.stringPath("bookName");
 
             List<String> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                     .fromValues(book.name, bookName, Collections.singleton("book"))
