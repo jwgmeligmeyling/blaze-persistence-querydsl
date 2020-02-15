@@ -2,9 +2,15 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
+import com.blazebit.persistence.testsuite.entity.IntIdEntity;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCte;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCteB;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderEntity;
+import com.blazebit.persistence.testsuite.entity.PolymorphicBase;
+import com.blazebit.persistence.testsuite.entity.PolymorphicSub1;
+import com.blazebit.persistence.testsuite.entity.PolymorphicSub2;
+import com.blazebit.persistence.testsuite.entity.QPolymorphicBase;
+import com.blazebit.persistence.testsuite.entity.QPolymorphicSub1;
 import com.blazebit.persistence.testsuite.entity.QRecursiveEntity;
 import com.blazebit.persistence.testsuite.entity.RecursiveEntity;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
@@ -16,10 +22,13 @@ import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.SubQueryExpression;
+import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.core.types.dsl.Param;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQuery;
+import org.hibernate.cfg.AvailableSettings;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,6 +38,7 @@ import javax.persistence.EntityManager;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.function.Consumer;
 
 import static com.blazebit.persistence.testsuite.entity.QRecursiveEntity.recursiveEntity;
@@ -59,8 +69,18 @@ public class BasicQueryTest extends AbstractCoreTest {
                 TestAdvancedCTE2.class,
                 ParameterOrderCte.class,
                 ParameterOrderCteB.class,
-                ParameterOrderEntity.class
+                ParameterOrderEntity.class,
+                IntIdEntity.class,
+                PolymorphicBase.class,
+                PolymorphicSub1.class,
+                PolymorphicSub2.class
         };
+    }
+
+    @Override
+    protected Properties applyProperties(Properties properties) {
+        properties.put(AvailableSettings.SHOW_SQL, false);
+        return super.applyProperties(properties);
     }
 
     public void doInJPA(Consumer<EntityManager> function) {
@@ -611,5 +631,19 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .fetch();
         });
     }
+
+    @Test
+    public void implicitJoinTreatedRoot() {
+        doInJPA(entityManager -> {
+            QPolymorphicBase p = new QPolymorphicBase("p");
+            QPolymorphicSub1 treat = JPAExpressions.treat(p, QPolymorphicSub1.class);
+            NumberPath<Integer> sub1Value = treat.sub1Value;
+
+            new BlazeJPAQuery<Integer>(entityManager, cbf)
+                    .from(p).select(sub1Value)
+                    .fetch();
+        });
+    }
+
 
 }
