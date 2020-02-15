@@ -1,4 +1,8 @@
 package com.pallasathenagroup.querydsl.api;
 
-public interface LeafOngoingSetOperationCriteriaBuilder<X> extends BaseOngoingSetOperationBuilder<LeafOngoingSetOperationCriteriaBuilder<X>, FinalSetOperationCriteriaBuilder<X>, StartOngoingSetOperationCriteriaBuilder<X, LeafOngoingFinalSetOperationCriteriaBuilder<X>>>, BaseCriteriaBuilder<X, LeafOngoingSetOperationCriteriaBuilder<X>>{
+public interface LeafOngoingSetOperationCriteriaBuilder<T /* , X */>
+        extends BaseOngoingSetOperationBuilder<LeafOngoingSetOperationCriteriaBuilder<T /* , X */>,
+        FinalSetOperationCriteriaBuilder<T>,
+        StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T /* , X */>>>,
+        BaseCriteriaBuilder<T, LeafOngoingSetOperationCriteriaBuilder<T /*, X */>> {
 }

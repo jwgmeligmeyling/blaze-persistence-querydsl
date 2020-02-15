@@ -1,20 +1,29 @@
 package com.pallasathenagroup.querydsl.impl;
 
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
-import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 
-public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, CriteriaBuilderImpl<T>> implements CriteriaBuilder<T, CriteriaBuilderImpl<T>> {
+public class LeafOngoingSetOperationCriteriaBuilderImpl<T, X extends LeafOngoingSetOperationCriteriaBuilderImpl<T, X>>
+        extends AbstractCriteriaBuilder<T, LeafOngoingSetOperationCriteriaBuilder<T>>
+        implements LeafOngoingSetOperationCriteriaBuilder<T>
+        , LeafOngoingFinalSetOperationCriteriaBuilder<T>
+{
 
-    public CriteriaBuilderImpl(BlazeJPAQuery<T> blazeJPAQuery) {
+    public LeafOngoingSetOperationCriteriaBuilderImpl(BlazeJPAQuery<T> blazeJPAQuery) {
         super(blazeJPAQuery);
     }
 
     @Override
+    public FinalSetOperationCriteriaBuilder<T> endSet() {
+        return null;
+    }
+
+    @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> union() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(new BlazeJPAQuery<>());
+        return null;
     }
 
     @Override

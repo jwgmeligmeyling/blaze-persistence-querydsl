@@ -122,7 +122,7 @@ public class UnionTests extends AbstractCoreTest {
         public void testFluent() {
             doInJPA(entityManager -> {
                 CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
--
+
                 String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(1337L))
                         .union()
                         .select(book).from(book).where(book.id.gt(1337L))
