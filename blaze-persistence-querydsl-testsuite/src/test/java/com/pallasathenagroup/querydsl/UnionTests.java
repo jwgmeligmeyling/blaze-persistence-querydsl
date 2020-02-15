@@ -121,11 +121,14 @@ public class UnionTests extends AbstractCoreTest {
         @Test
         public void testFluent() {
             doInJPA(entityManager -> {
+
                 CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
 
                 String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(1337L))
-                        .union()
-                        .select(book).from(book).where(book.id.gt(1337L))
+                        .unionAll()
+                        .select(book).from(book).where(book.id.lt(1337L))
+                        .except()
+                        .select(book).from(book).where(book.id.eq(1337L))
                         .endSet()
                         .getQueryString();
 

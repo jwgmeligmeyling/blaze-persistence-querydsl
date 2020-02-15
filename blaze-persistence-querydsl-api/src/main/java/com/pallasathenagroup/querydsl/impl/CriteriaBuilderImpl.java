@@ -1,6 +1,7 @@
 package com.pallasathenagroup.querydsl.impl;
 
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
+import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
@@ -14,32 +15,32 @@ public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, Criteria
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> union() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(new BlazeJPAQuery<>());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_UNION, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> unionAll() {
-        return null;
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_UNION_ALL, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> intersect() {
-        return null;
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_INTERSECT, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> intersectAll() {
-        return null;
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_INTERSECT_ALL, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> except() {
-        return null;
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_EXCEPT, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> exceptAll() {
-        return null;
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_EXCEPT_ALL, blazeJPAQuery, blazeJPAQuery.createSubQuery());
     }
 
     @Override

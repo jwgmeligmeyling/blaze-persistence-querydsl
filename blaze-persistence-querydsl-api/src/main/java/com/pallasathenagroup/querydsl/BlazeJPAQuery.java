@@ -63,4 +63,8 @@ public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>>
         return newType;
     }
 
+    public <T> BlazeJPAQuery<T> createSubQuery() {
+        return new BlazeJPAQuery<T>(entityManager, getTemplates(), criteriaBuilderFactory);
+    }
+
 }
