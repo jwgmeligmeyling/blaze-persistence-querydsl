@@ -1,14 +1,16 @@
 package com.pallasathenagroup.querydsl.impl;
 
-import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.api.BaseFinalSetOperationBuilder;
 import com.pallasathenagroup.querydsl.api.BaseOngoingFinalSetOperationBuilder;
 import com.pallasathenagroup.querydsl.api.CommonQueryBuilder;
+import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.ParamExpression;
+import com.querydsl.core.types.Visitor;
 
+import javax.annotation.Nullable;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
@@ -69,4 +71,16 @@ public abstract class BaseFinalSetOperationCriteriaBuilderImpl<T, Q extends Base
         return blazeJPAQuery.fetchOne();
     }
 
+    public QueryMetadata getMetadata() {
+        return blazeJPAQuery.getMetadata();
+    }
+
+    @Nullable
+    public <R, C> R accept(Visitor<R, C> v, @Nullable C context) {
+        return blazeJPAQuery.accept(v, context);
+    }
+
+    public Class<? extends T> getType() {
+        return blazeJPAQuery.getType();
+    }
 }

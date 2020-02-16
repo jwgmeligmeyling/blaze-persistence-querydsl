@@ -14,9 +14,9 @@ import java.util.List;
 
 public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implements SetExpression<T> {
 
-    private final Q query;
+    private final AbstractBlazeJPAQuery<T, ?> query;
 
-    public SetExpressionImpl(Q query) {
+    public SetExpressionImpl(AbstractBlazeJPAQuery<T, ?> query) {
         this.query = query;
     }
 
@@ -101,6 +101,12 @@ public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> impleme
 
     @Override
     public String toString() {
-        return query.toString();
+        try {
+            return query.toString();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 }

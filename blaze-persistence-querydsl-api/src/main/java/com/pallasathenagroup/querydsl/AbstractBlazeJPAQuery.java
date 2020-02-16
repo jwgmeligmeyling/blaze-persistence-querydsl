@@ -7,6 +7,7 @@ import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.Queryable;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
+import com.pallasathenagroup.querydsl.impl.NotEmptySetVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.JoinFlag;
 import com.querydsl.core.NonUniqueResultException;
@@ -403,6 +404,13 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");
         }
+
+        for (SubQueryExpression<RT> rtSubQueryExpression : sq) {
+            if (! rtSubQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null)) {
+                throw new AssertionError();
+            }
+        }
+
         this.union = SetUtils.setOperation(operator, sq.toArray(new Expression[0]));
         return new SetExpressionImpl(this);
     }

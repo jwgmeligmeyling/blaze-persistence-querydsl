@@ -9,15 +9,29 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
+import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.OngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.SetOperationBuilder;
+import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.impl.CriteriaBuilderImpl;
-import org.junit.Assert;
+import com.pallasathenagroup.querydsl.impl.LeafOngoingSetOperationCriteriaBuilderImpl;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.Param;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.persistence.EntityManager;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.querydsl.jpa.JPAExpressions.select;
@@ -52,6 +66,440 @@ public class UnionTests extends AbstractCoreTest {
         }
 
     }
+
+
+    @RunWith(Parameterized.class)
+    public static class CriteriaBuilderImplTests extends AbstractUnionTest {
+
+        @Parameterized.Parameters(name = "{0}")
+        public static Collection<Object[]> data() {
+            return Arrays.asList(new Object[][]{
+                    {"UNION", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startUnion, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startUnion, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::union, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startUnion, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::union, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startUnion},
+                    {"UNION ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startUnionAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startUnionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::unionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startUnionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::unionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startUnionAll},
+                    {"INTERSECT", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startIntersect, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startIntersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::intersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startIntersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::intersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startIntersect},
+                    {"INTERSECT ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startIntersectAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startIntersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::intersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startIntersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::intersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startIntersectAll},
+                    {"EXCEPT", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startExcept, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startExcept, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::except, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startExcept, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::except, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startExcept},
+                    {"EXCEPT ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startExceptAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::startExceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::exceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startExceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>) SetOperationBuilder::exceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>>) SetOperationBuilder::startExceptAll},
+            });
+        }
+
+
+        @Parameterized.Parameter(1)
+        public Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>> criteriaBuilderSetFunction;
+
+        @Parameterized.Parameter(2)
+        public Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>> leafOngoingSetFunction;
+
+        @Parameterized.Parameter(3)
+        public Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> criteriaBuilderStartSetFunction;
+
+        @Parameterized.Parameter(4)
+        public Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> leafOngoingSetStartSetFunction;
+
+        @Parameterized.Parameter(5)
+        public Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> startOngoingSetOperationSetFunction;
+
+        @Parameterized.Parameter(6)
+        public Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>> startOngoingSetOperationNestedSetFunction;
+
+        @Parameterized.Parameter(7)
+        public Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> ongoingSetSetFunction;
+
+        @Parameterized.Parameter(8)
+        public Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>>> ongoingSetNestedSetFunction;
+
+        @Parameterized.Parameter
+        public String setOperation;
+
+        private Param<Long> a = new Param<>(Long.class, "a"), b = new Param<>(Long.class, "b"), c = new Param<>(Long.class, "c"), d = new Param<>(Long.class, "d"), e = new Param<>(Long.class, "e"), f = new Param<>(Long.class, "f");
+
+        @Test
+        public void testCriteriaBuilderEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            String queryString = criteriaBuilderSetFunction.apply(where).endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a");
+
+        }
+
+        @Test
+        public void testCriteriaBuilderSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
+
+            String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b");
+        }
+
+        @Test
+        public void testLeafOngoingSetOperationBuilderSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
+
+            leafOngoingSetOperationCriteriaBuilder = leafOngoingSetFunction.apply(leafOngoingSetOperationCriteriaBuilder)
+                    .select(book).from(book).where(book.id.gt(c));
+
+            String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c");
+
+        }
+
+        @Test
+        public void testLeafOngoingSetOperationBuilderEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
+
+            leafOngoingSetOperationCriteriaBuilder = leafOngoingSetFunction.apply(leafOngoingSetOperationCriteriaBuilder);
+
+            String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b");
+        }
+
+        @Test
+        public void testCriteriaBuilderStartRhsSet() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> apply = criteriaBuilderStartSetFunction.apply(where);
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> where1 =
+                    apply
+                            .select(book).from(book).where(book.id.gt(b))
+                            .union()
+                            .select(book).from(book).where(book.id.gt(c));
+
+
+            String queryString = where1.endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    setOperation + "\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\nUNION\nSELECT book FROM Book book WHERE book.id > :c)");
+        }
+
+        @Test
+        public void testLeafOngoingSetOperationBuilderStartRhsSet() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> where1 = leafOngoingSetStartSetFunction.apply(leafOngoingSetOperationCriteriaBuilder)
+                    .select(book).from(book).where(book.id.gt(c))
+                    .except()
+                    .select(book).from(book).where(book.id.gt(d));
+
+
+            String queryString = where1.endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    ""+ setOperation + "\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :c\n" +
+                    "EXCEPT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :d)");
+
+        }
+
+        @Test
+        @Ignore("Not implemented yet")
+        public void testLeafOngoingSetOperationBuilderStartRhsEmptySet() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> where1 = leafOngoingSetStartSetFunction.apply(leafOngoingSetOperationCriteriaBuilder);
+
+
+            String queryString = where1.endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b");
+
+        }
+
+
+        @Test
+        public void testStartOngoingSetOperationBuilderSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> startOngoingSetOperationCriteriaBuilder = leafOngoingSetOperationCriteriaBuilder.startIntersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> where1 = startOngoingSetOperationSetFunction.apply(startOngoingSetOperationCriteriaBuilder)
+                    .select(book).from(book).where(book.id.gt(d))
+                    .union().select(book).from(book).where(book.id.gt(e));
+
+
+            LeafOngoingFinalSetOperationCriteriaBuilder<Book> bookLeafOngoingFinalSetOperationCriteriaBuilder = where1.endSet();
+            FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder = bookLeafOngoingFinalSetOperationCriteriaBuilder.endSet();
+            String queryString = bookFinalSetOperationCriteriaBuilder.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :c\n"
+                    + setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :d\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :e)");
+        }
+
+        @Test
+        public void testStartOngoingSetOperationBuilderEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> startOngoingSetOperationCriteriaBuilder = leafOngoingSetOperationCriteriaBuilder.startIntersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> where1 = startOngoingSetOperationSetFunction.apply(startOngoingSetOperationCriteriaBuilder);
+
+
+            String queryString = where1.endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c");
+
+        }
+
+        @Test
+        public void testStartOngoingSetOperationBuilderNestedSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> startOngoingSetOperationCriteriaBuilder = leafOngoingSetOperationCriteriaBuilder.startIntersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            OngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> where1 = startOngoingSetOperationNestedSetFunction.apply(startOngoingSetOperationCriteriaBuilder)
+                    .select(book).from(book).where(book.id.gt(d)).except().select(book).from(book).where(book.id.gt(e));
+
+
+            String queryString = where1.endSet().endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :c\n" +
+                    setOperation + "\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :d\n" +
+                    "EXCEPT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :e))");
+        }
+
+        @Test
+        public void testStartOngoingSetOperationBuilderNestedEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
+                    where.union().select(book).from(book).where(book.id.gt(b));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> startOngoingSetOperationCriteriaBuilder = leafOngoingSetOperationCriteriaBuilder.startIntersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> where1 = startOngoingSetOperationNestedSetFunction.apply(startOngoingSetOperationCriteriaBuilder);
+
+            String queryString = where1.endSet().endSet().endSet().getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c");
+        }
+
+
+        OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> setOperation(OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> builder) {
+            return ongoingSetSetFunction.apply(builder);
+        }
+
+        @Test
+        public void testOngoingSetOperationBuilderSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> union = where
+                    .startUnion().select(book).from(book).where(book.id.gt(b))
+                    .intersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step1 = setOperation(union);
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step2 = step1.select(book).from(book).where(book.id.gt(d));
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step3 = step2.except();
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step4 = step3.select(book).from(book).where(book.id.gt(e));
+
+            LeafOngoingFinalSetOperationCriteriaBuilder<Book> step5 = step4.endSet();
+            FinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
+
+            String queryString = step6.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c\n" +
+                    setOperation + "\n" +
+                    "SELECT book FROM Book book WHERE book.id > :d\n" +
+                    "EXCEPT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :e)");
+        }
+
+        @Test
+        public void testOngoingSetOperationBuilderEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> union = where
+                    .startUnion().select(book).from(book).where(book.id.gt(b))
+                    .intersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step1 = setOperation(union);
+
+            LeafOngoingFinalSetOperationCriteriaBuilder<Book> step5 = step1.endSet();
+            FinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
+
+            String queryString = step6.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c)");
+        }
+
+        private StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> nestedSetOperation(OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> union) {
+            return ongoingSetNestedSetFunction.apply(union);
+        }
+
+        @Test
+        public void testOngoingSetOperationBuilderNestedSetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> union = where
+                    .startUnion().select(book).from(book).where(book.id.gt(b))
+                    .intersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> step1 = nestedSetOperation(union);
+
+            StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> step2 = step1.select(book).from(book).where(book.id.gt(d));
+            OngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> step3 = step2.except();
+            OngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> step4 = step3.select(book).from(book).where(book.id.gt(e));
+
+            MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step5 = step4.endSet();
+            LeafOngoingFinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
+            FinalSetOperationCriteriaBuilder<Book> step7 = step6.endSet();
+
+            String queryString = step7.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :c\n" +
+                    setOperation + "\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :d\n" +
+                    "EXCEPT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :e)))");
+        }
+
+        @Test
+        public void testOngoingSetOperationBuilderNestedEmptySetOperation() {
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> union = where
+                    .startUnion().select(book).from(book).where(book.id.gt(b))
+                    .intersect()
+                    .select(book).from(book).where(book.id.gt(c));
+
+            StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>>> step1 = nestedSetOperation(union);
+
+
+            MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step5 = step1.endSet();
+            LeafOngoingFinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
+            FinalSetOperationCriteriaBuilder<Book> step7 = step6.endSet();
+
+            String queryString = step7.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c)");
+        }
+
+        @Test
+        public void testDeepNesting() {
+
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder = where.unionAll();
+
+            MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step3 = leafOngoingSetStartSetFunction.apply(leafOngoingSetOperationCriteriaBuilder)
+                    .select(book).from(book).where(book.id.gt(b))
+                    .startExcept().select(book).from(book).where(book.id.gt(c)).unionAll().select(book).from(book).where(book.id.gt(d))
+                    .endSet();
+
+            LeafOngoingSetOperationCriteriaBuilder<Book> step4 = step3.endSet().select(book).from(book).where(book.id.gt(e));
+            FinalSetOperationCriteriaBuilder<Book> step5 = step4.endSet();
+
+
+            String queryString = step5.getQueryString();
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "INTERSECT\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c)");
+
+        }
+    }
+
 
     public static class SimpleUnionTest extends AbstractUnionTest {
 
@@ -123,14 +571,63 @@ public class UnionTests extends AbstractCoreTest {
             doInJPA(entityManager -> {
 
                 CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
+                CriteriaBuilderImpl<Book> criteriaBuilder2 = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
+                Param<Long> a = new Param<>(Long.class, "a");
+                Param<Long> b = new Param<>(Long.class, "b");
+                Param<Long> c = new Param<>(Long.class, "c");
+                Param<Long> d = new Param<>(Long.class, "d");
+                Param<Long> e = new Param<>(Long.class, "e");
+                Param<Long> f = new Param<>(Long.class, "f");
+                Param<Long> g = new Param<>(Long.class, "g");
+                Param<Long> h = new Param<>(Long.class, "h");
+                Param<Long> i = new Param<>(Long.class, "i");
+                Param<Long> j = new Param<>(Long.class, "j");
+                Param<Long> k = new Param<>(Long.class, "k");
+                Param<Long> l = new Param<>(Long.class, "l");
+                Param<Long> m = new Param<>(Long.class, "m");
 
-                String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(1337L))
+
+                FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
                         .unionAll()
-                        .select(book).from(book).where(book.id.lt(1337L))
+                            .select(book).from(book).where(book.id.lt(b))
                         .except()
-                        .select(book).from(book).where(book.id.eq(1337L))
-                        .endSet()
+                            .select(book).from(book).where(book.id.eq(c))
+                        .startUnion()
+                                .select(book).from(book).where(book.id.gt(d))
+                            .intersect()
+                                .select(book).from(book).where(book.id.gt(g))
+                                .startUnion()
+                                        .select(book).from(book).where(book.id.gt(e))
+                                    .intersect()
+                                        .select(book).from(book).where(book.id.lt(f))
+                                    .endSet()
+                                .startExcept()
+                                .endSet()
+                                .startExceptAll()
+                                    .startIntersect()
+                                        .select(book).from(book).where(book.id.lt(h))
+                                        .unionAll()
+                                        .select(book).from(book).where(book.id.lt(i))
+                                    .endSet()
+                                    .except()
+                                        .select(book).from(book).where(book.id.lt(j))
+                                    .endSet()
+                                    .intersect()
+                                        .select(book).from(book).where(book.id.lt(k))
+                                    .endSet()
+                                    .select(book).from(book).where(book.id.lt(l))
+                                    .intersect()
+                                        .select(book).from(book).where(book.id.lt(m))
+                                .endSet()
+                            .orderBy(Expressions.stringPath("name").asc());
+
+//                System.out.println(bookFinalSetOperationCriteriaBuilder.toString());;
+                String queryString = bookFinalSetOperationCriteriaBuilder
                         .getQueryString();
+
+                QBook outerBook = new QBook("outerBook");
+
+                String queryString1 = criteriaBuilder2.select(outerBook).from(outerBook).where(outerBook.in(bookFinalSetOperationCriteriaBuilder)).getQueryString();
 
                 System.out.println(queryString);
             });

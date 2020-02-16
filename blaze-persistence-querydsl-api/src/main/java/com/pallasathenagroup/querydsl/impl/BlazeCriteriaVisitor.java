@@ -394,7 +394,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private void renderConstants(ParameterHolder<?> criteriaBuilder) {
         for (Map.Entry<Object, String> entry : constantToLabel.entrySet()) {
-            criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+            try {
+                criteriaBuilder.setParameter(entry.getValue(), entry.getKey());
+            }
+            catch (Exception e) {
+                throw e;
+            }
         }
     }
 

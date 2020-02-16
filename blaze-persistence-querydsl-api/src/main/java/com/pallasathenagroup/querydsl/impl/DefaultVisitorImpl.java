@@ -9,39 +9,39 @@ import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.TemplateExpression;
 import com.querydsl.core.types.Visitor;
 
-public class DefaultVisitorImpl<T,V> implements Visitor<T,V> {
+public class DefaultVisitorImpl<R, C> implements Visitor<R, C> {
     @Override
-    public T visit(Constant<?> constant, V v) {
+    public R visit(Constant<?> constant, C c) {
         return null;
     }
 
     @Override
-    public T visit(FactoryExpression<?> factoryExpression, V v) {
+    public R visit(FactoryExpression<?> factoryExpression, C c) {
         return null;
     }
 
     @Override
-    public T visit(Operation<?> operation, V v) {
+    public R visit(Operation<?> operation, C c) {
         return null;
     }
 
     @Override
-    public T visit(ParamExpression<?> paramExpression, V v) {
+    public R visit(ParamExpression<?> paramExpression, C c) {
         return null;
     }
 
     @Override
-    public T visit(Path<?> path, V v) {
+    public R visit(Path<?> path, C c) {
         return null;
     }
 
     @Override
-    public T visit(SubQueryExpression<?> subQueryExpression, V v) {
+    public R visit(SubQueryExpression<?> subQueryExpression, C c) {
         return null;
     }
 
     @Override
-    public T visit(TemplateExpression<?> templateExpression, V v) {
+    public R visit(TemplateExpression<?> templateExpression, C c) {
         return null;
     }
 }
