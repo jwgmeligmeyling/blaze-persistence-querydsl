@@ -1,7 +1,7 @@
 package com.pallasathenagroup.querydsl.api;
 
 
-public interface OngoingFinalSetOperationCriteriaBuilder<T> extends BaseOngoingFinalSetOperationBuilder<T, OngoingFinalSetOperationCriteriaBuilder<T>> {
+public interface OngoingFinalSetOperationCriteriaBuilder<X, T> extends BaseOngoingFinalSetOperationBuilder<X, OngoingFinalSetOperationCriteriaBuilder<X, T>> {
 
 }
 

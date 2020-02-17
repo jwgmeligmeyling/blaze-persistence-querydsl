@@ -1,4 +1,7 @@
 package com.pallasathenagroup.querydsl.api;
 
-public interface OngoingSetOperationCriteriaBuilder<T, Y> extends MiddleOngoingSetOperationCriteriaBuilder<T, Y>, BaseCriteriaBuilder<T, OngoingSetOperationCriteriaBuilder<T, Y>> {
+public interface OngoingSetOperationCriteriaBuilder<X, Y, T> extends MiddleOngoingSetOperationCriteriaBuilder<X, Y, T>, BaseCriteriaBuilder<T, OngoingSetOperationCriteriaBuilder<X, Y, T>> {
+
+    @Override
+    Y endSet();
 }

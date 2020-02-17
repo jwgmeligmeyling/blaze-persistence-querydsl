@@ -7,5 +7,5 @@ public interface CriteriaBuilder<T, X extends CriteriaBuilder<T, X>> extends
         CTEBuilder<X>,
         SetOperationBuilder<
                 LeafOngoingSetOperationCriteriaBuilder<T>,
-                StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>>> {
+                StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>> {
 }
