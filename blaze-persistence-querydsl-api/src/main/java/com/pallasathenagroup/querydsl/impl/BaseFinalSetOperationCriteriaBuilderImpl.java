@@ -3,7 +3,6 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.api.BaseFinalSetOperationBuilder;
 import com.pallasathenagroup.querydsl.api.BaseOngoingFinalSetOperationBuilder;
-import com.pallasathenagroup.querydsl.api.CommonQueryBuilder;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.types.OrderSpecifier;
@@ -14,7 +13,7 @@ import javax.annotation.Nullable;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-public abstract class BaseFinalSetOperationCriteriaBuilderImpl<T, Q extends BaseFinalSetOperationBuilder<T, Q> & CommonQueryBuilder<Q>>
+public abstract class BaseFinalSetOperationCriteriaBuilderImpl<T, Q extends BaseFinalSetOperationBuilder<T, Q>>
         extends BaseFinalSetOperationBuilderImpl<T, Q>
         implements BaseOngoingFinalSetOperationBuilder<T, Q> {
 
