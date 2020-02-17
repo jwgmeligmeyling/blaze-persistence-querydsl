@@ -40,23 +40,34 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
     }
 
     public SetExpression<T> getSetOperation() {
-        BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-        switch (operation) {
-            case SET_UNION:
-                return subQuery.union(lhs, blazeJPAQuery);
-            case SET_UNION_ALL:
-                return subQuery.unionAll(lhs, blazeJPAQuery);
-            case SET_INTERSECT:
-                return subQuery.intersect(lhs, blazeJPAQuery);
-            case SET_INTERSECT_ALL:
-                return subQuery.intersectAll(lhs, blazeJPAQuery);
-            case SET_EXCEPT:
-                return subQuery.except(lhs, blazeJPAQuery);
-            case SET_EXCEPT_ALL:
-                return subQuery.exceptAll(lhs, blazeJPAQuery);
-            default:
-                throw new UnsupportedOperationException();
+        boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
+        if (builderResultNotEmpty) {
+
+            BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
+            switch (operation) {
+                case SET_UNION:
+                    return subQuery.union(lhs, blazeJPAQuery);
+                case SET_UNION_ALL:
+                    return subQuery.unionAll(lhs, blazeJPAQuery);
+                case SET_INTERSECT:
+                    return subQuery.intersect(lhs, blazeJPAQuery);
+                case SET_INTERSECT_ALL:
+                    return subQuery.intersectAll(lhs, blazeJPAQuery);
+                case SET_EXCEPT:
+                    return subQuery.except(lhs, blazeJPAQuery);
+                case SET_EXCEPT_ALL:
+                    return subQuery.exceptAll(lhs, blazeJPAQuery);
+                default:
+                    throw new UnsupportedOperationException();
+            }
         }
+        if (lhs instanceof SetExpression) {
+            return (SetExpression<T>) lhs;
+        }
+        else {
+            return new SetExpressionImpl((AbstractBlazeJPAQuery) lhs);
+        }
+
     }
 
     @Override
@@ -90,11 +101,19 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
     }
 
     public LeafOngoingFinalSetOperationCriteriaBuilder<T> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
-        if (blazeJPAQuery.getMetadata().getJoins().isEmpty()) {
-            return new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, lhs, blazeJPAQuery.createSubQuery());
+        boolean subBuilderResultNotEmpty = subQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
+
+        if (! subBuilderResultNotEmpty) {
+            return this;
         }
 
-        SetExpression<T> lhs = getSetOperation();
+        SubQueryExpression<T> lhs = this.lhs;
+
+        boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
+        if (builderResultNotEmpty) {
+            lhs = getSetOperation();
+        }
+
         BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
         SetExpression<T> union;
         switch (setOperation) {

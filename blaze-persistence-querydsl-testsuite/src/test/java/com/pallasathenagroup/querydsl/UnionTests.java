@@ -9,7 +9,6 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
-import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
@@ -21,7 +20,6 @@ import com.pallasathenagroup.querydsl.impl.CriteriaBuilderImpl;
 import com.pallasathenagroup.querydsl.impl.LeafOngoingSetOperationCriteriaBuilderImpl;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Param;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -224,7 +222,6 @@ public class UnionTests extends AbstractCoreTest {
         }
 
         @Test
-        @Ignore("Not implemented yet")
         public void testLeafOngoingSetOperationBuilderStartRhsEmptySet() {
             CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
 
@@ -439,11 +436,11 @@ public class UnionTests extends AbstractCoreTest {
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
-                    "(SELECT book FROM Book book WHERE book.id > :c\n" +
+                    "SELECT book FROM Book book WHERE book.id > :c\n" +
                     setOperation + "\n" +
                     "(SELECT book FROM Book book WHERE book.id > :d\n" +
                     "EXCEPT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :e)))");
+                    "SELECT book FROM Book book WHERE book.id > :e))");
         }
 
         @Test
@@ -472,32 +469,6 @@ public class UnionTests extends AbstractCoreTest {
                     "SELECT book FROM Book book WHERE book.id > :c)");
         }
 
-        @Test
-        public void testDeepNesting() {
-
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
-
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
-
-            LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder = where.unionAll();
-
-            MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>> step3 = leafOngoingSetStartSetFunction.apply(leafOngoingSetOperationCriteriaBuilder)
-                    .select(book).from(book).where(book.id.gt(b))
-                    .startExcept().select(book).from(book).where(book.id.gt(c)).unionAll().select(book).from(book).where(book.id.gt(d))
-                    .endSet();
-
-            LeafOngoingSetOperationCriteriaBuilder<Book> step4 = step3.endSet().select(book).from(book).where(book.id.gt(e));
-            FinalSetOperationCriteriaBuilder<Book> step5 = step4.endSet();
-
-
-            String queryString = step5.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
-                    "UNION\n" +
-                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
-                    "INTERSECT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c)");
-
-        }
     }
 
 
@@ -567,6 +538,50 @@ public class UnionTests extends AbstractCoreTest {
         }
 
         @Test
+        public void testDeepNesting() {
+            Param<Long> a = new Param<>(Long.class, "a");
+            Param<Long> b = new Param<>(Long.class, "b");
+            Param<Long> c = new Param<>(Long.class, "c");
+            Param<Long> d = new Param<>(Long.class, "d");
+            Param<Long> e = new Param<>(Long.class, "e");
+            Param<Long> f = new Param<>(Long.class, "f");
+
+            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+
+            String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
+                    .startUnion()
+                    .select(book).from(book).where(book.id.gt(b))
+                    .startExcept()
+                    .select(book).from(book).where(book.id.gt(c))
+                    .startIntersect()
+                    .select(book).from(book).where(book.id.gt(d))
+                    .startUnionAll()
+                    .select(book).from(book).where(book.id.gt(e))
+                    .exceptAll()
+                    .select(book).from(book).where(book.id.gt(f))
+                    .endSet()
+                    .endSet()
+                    .endSet()
+                    .endSet()
+                    .endSet()
+                    .getQueryString();
+            ;
+
+            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+                    "UNION\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :b\n" +
+                    "EXCEPT\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :c\n" +
+                    "INTERSECT\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :d\n" +
+                    "UNION ALL\n" +
+                    "(SELECT book FROM Book book WHERE book.id > :e\n" +
+                    "EXCEPT ALL\n" +
+                    "SELECT book FROM Book book WHERE book.id > :f))))");
+
+        }
+
+        @Test
         public void testFluent() {
             doInJPA(entityManager -> {
 
@@ -584,46 +599,72 @@ public class UnionTests extends AbstractCoreTest {
                 Param<Long> j = new Param<>(Long.class, "j");
                 Param<Long> k = new Param<>(Long.class, "k");
                 Param<Long> l = new Param<>(Long.class, "l");
-                Param<Long> m = new Param<>(Long.class, "m");
 
 
-                FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
+                LeafOngoingFinalSetOperationCriteriaBuilder<Book> bookLeafOngoingFinalSetOperationCriteriaBuilder = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
                         .unionAll()
-                            .select(book).from(book).where(book.id.lt(b))
+                        .select(book).from(book).where(book.id.gt(b))
                         .except()
-                            .select(book).from(book).where(book.id.eq(c))
+                        .select(book).from(book).where(book.id.gt(c))
                         .startUnion()
-                                .select(book).from(book).where(book.id.gt(d))
-                            .intersect()
-                                .select(book).from(book).where(book.id.gt(g))
-                                .startUnion()
-                                        .select(book).from(book).where(book.id.gt(e))
+                        .select(book).from(book).where(book.id.gt(d))
+                        .intersect()
+                        .select(book).from(book).where(book.id.gt(e))
+                        .startUnion()
+                        .select(book).from(book).where(book.id.gt(f))
+                        .intersect()
+                        .select(book).from(book).where(book.id.gt(g))
+                        .endSet()
+                        .startExcept()
+                        .endSet()
+                        .startExceptAll()
+                        .startIntersect()
+                        .select(book).from(book).where(book.id.gt(h))
+                        .unionAll()
+                        .select(book).from(book).where(book.id.gt(i))
+                        .endSet()
+                        .except()
+                        .select(book).from(book).where(book.id.gt(j))
+                        .endSet()
+
+                        .intersect()
+                        .select(book).from(book).where(book.id.gt(k))
+                        .endSet();
+
+                FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder =
+                        bookLeafOngoingFinalSetOperationCriteriaBuilder
                                     .intersect()
-                                        .select(book).from(book).where(book.id.lt(f))
-                                    .endSet()
-                                .startExcept()
-                                .endSet()
-                                .startExceptAll()
-                                    .startIntersect()
-                                        .select(book).from(book).where(book.id.lt(h))
-                                        .unionAll()
-                                        .select(book).from(book).where(book.id.lt(i))
-                                    .endSet()
-                                    .except()
-                                        .select(book).from(book).where(book.id.lt(j))
-                                    .endSet()
-                                    .intersect()
-                                        .select(book).from(book).where(book.id.lt(k))
-                                    .endSet()
-                                    .select(book).from(book).where(book.id.lt(l))
-                                    .intersect()
-                                        .select(book).from(book).where(book.id.lt(m))
+                                        .select(book).from(book).where(book.id.gt(l))
                                 .endSet()
                             .orderBy(Expressions.stringPath("name").asc());
 
-//                System.out.println(bookFinalSetOperationCriteriaBuilder.toString());;
                 String queryString = bookFinalSetOperationCriteriaBuilder
                         .getQueryString();
+
+                assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
+                        "UNION ALL\n" +
+                        "SELECT book FROM Book book WHERE book.id > :b\n" +
+                        "EXCEPT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :c\n" +
+                        "UNION\n" +
+                        "(SELECT book FROM Book book WHERE book.id > :d\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :e\n" +
+                        "UNION\n" +
+                        "(SELECT book FROM Book book WHERE book.id > :f\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :g)\n" +
+                        "EXCEPT ALL\n" +
+                        "(SELECT book FROM Book book WHERE book.id > :h\n" +
+                        "UNION ALL\n" +
+                        "SELECT book FROM Book book WHERE book.id > :i\n" +
+                        "EXCEPT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :j)\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :k)\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :l\n" +
+                        "ORDER BY name ASC NULLS LAST", queryString);
 
                 QBook outerBook = new QBook("outerBook");
 

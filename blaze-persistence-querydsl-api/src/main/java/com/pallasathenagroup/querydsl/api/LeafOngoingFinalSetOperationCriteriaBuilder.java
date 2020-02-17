@@ -4,6 +4,5 @@ public interface LeafOngoingFinalSetOperationCriteriaBuilder<T> extends
         BaseOngoingSetOperationBuilder<
                 LeafOngoingSetOperationCriteriaBuilder<T>,
                 FinalSetOperationCriteriaBuilder<T>,
-                StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>>>,
-        BaseCriteriaBuilder<T, LeafOngoingSetOperationCriteriaBuilder<T>> {
+                StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>>> {
 }

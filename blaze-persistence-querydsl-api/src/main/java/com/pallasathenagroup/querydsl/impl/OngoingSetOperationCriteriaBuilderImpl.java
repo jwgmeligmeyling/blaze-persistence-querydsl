@@ -113,22 +113,19 @@ public class OngoingSetOperationCriteriaBuilderImpl<T, Z> extends
     }
 
     public MiddleOngoingSetOperationCriteriaBuilder<T, Z> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
-        boolean subBuilderResultNotEmpty = subQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
+        SubQueryExpression<T> middleOngoingSetResult = this.lhs;
         boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
-        SubQueryExpression<T> middleOngoingSetResult;
 
-        if (subBuilderResultNotEmpty) {
-            middleOngoingSetResult = subQueryExpression;
-            if (builderResultNotEmpty) {
-                middleOngoingSetResult = getSetOperation(setOperation, blazeJPAQuery, middleOngoingSetResult);
-            }
-        } else if (builderResultNotEmpty) {
-            middleOngoingSetResult = blazeJPAQuery;
-        } else {
-            return this;
+        if (builderResultNotEmpty) {
+            middleOngoingSetResult = getSetOperation(this.operation, middleOngoingSetResult, blazeJPAQuery);
         }
 
-        middleOngoingSetResult = getSetOperation(this.operation, lhs, middleOngoingSetResult);
+        boolean subBuilderResultNotEmpty = subQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
+
+        if (subBuilderResultNotEmpty) {
+            middleOngoingSetResult = getSetOperation(setOperation, middleOngoingSetResult, subQueryExpression);
+        }
+
         return new OngoingSetOperationCriteriaBuilderImpl<T, Z>(blazeJPAQuery.createSubQuery(), finalizer, this.operation, middleOngoingSetResult);
     }
 
