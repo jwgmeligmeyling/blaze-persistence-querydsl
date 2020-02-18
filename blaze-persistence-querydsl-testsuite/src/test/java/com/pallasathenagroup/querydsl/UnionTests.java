@@ -614,6 +614,8 @@ public class UnionTests extends AbstractCoreTest {
                         .select(book).from(book).where(book.id.gt(f))
                         .intersect()
                         .select(book).from(book).where(book.id.gt(g))
+                        .endSetWith()
+                        .orderBy(book.name.asc()).limit(1)
                         .endSet()
                         .startExcept()
                         .endSet()

@@ -6,6 +6,7 @@ import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 import com.querydsl.core.types.SubQueryExpression;
 
@@ -65,9 +66,14 @@ public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, Criteria
         }
     }
 
-    public LeafOngoingFinalSetOperationCriteriaBuilder<T> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
+    public OngoingFinalSetOperationCriteriaBuilder<LeafOngoingFinalSetOperationCriteriaBuilder<T>> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
         SetExpression<T> setOperation1 = getSetOperation(setOperation, blazeJPAQuery, subQueryExpression);
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, setOperation1, blazeJPAQuery.createSubQuery());
+        return new OngoingFinalSetOperationCriteriaBuilderImpl<LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>(setOperation1) {
+            @Override
+            public LeafOngoingFinalSetOperationCriteriaBuilder<T> endSet() {
+                return new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, this.blazeJPAQuery, CriteriaBuilderImpl.this.blazeJPAQuery.createSubQuery());
+            }
+        };
     }
 
     @Override

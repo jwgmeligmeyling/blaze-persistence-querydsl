@@ -4,6 +4,7 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.SetExpression;
+import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingSetOperationCriteriaBuilder;
@@ -18,11 +19,11 @@ public class StartOngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
 
 
     protected final JPQLNextOps operation;
-    private final BiFunction<SubQueryExpression<T>, JPQLNextOps, Y> finalizer;
+    private final BiFunction<SubQueryExpression<T>, JPQLNextOps, OngoingFinalSetOperationCriteriaBuilder<Y>> finalizer;
 
     public StartOngoingSetOperationCriteriaBuilderImpl(
             BlazeJPAQuery<T> blazeJPAQuery, JPQLNextOps operation,
-            BiFunction<SubQueryExpression<T>, JPQLNextOps, Y> finalizer
+            BiFunction<SubQueryExpression<T>, JPQLNextOps, OngoingFinalSetOperationCriteriaBuilder<Y>> finalizer
     ) {
         super(blazeJPAQuery);
         this.operation = operation;
@@ -31,12 +32,12 @@ public class StartOngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
 
     @Override
     public OngoingFinalSetOperationCriteriaBuilder<Y> endSetWith() {
-        throw new UnsupportedOperationException();
+        return finalizer.apply(blazeJPAQuery, operation);
     }
 
     @Override
     public Y endSet() {
-        return finalizer.apply(blazeJPAQuery, operation);
+        return endSetWith().endSet();
     }
 
     @Override
@@ -59,7 +60,7 @@ public class StartOngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
         return new OngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), this::endWith, JPQLNextOps.SET_INTERSECT, blazeJPAQuery);
     }
 
-    public Y endWith(SubQueryExpression<T> subQueryExpression) {
+    public OngoingFinalSetOperationCriteriaBuilder<Y> endWith(SubQueryExpression<T> subQueryExpression) {
         return finalizer.apply(subQueryExpression, operation);
     }
 
@@ -99,24 +100,32 @@ public class StartOngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
         }
     }
 
-    public MiddleOngoingSetOperationCriteriaBuilder<X, Y, T> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
+    public OngoingFinalSetOperationCriteriaBuilder<MiddleOngoingSetOperationCriteriaBuilder<X, Y, T>> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
         boolean subBuilderResultNotEmpty = subQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
         boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
-        SubQueryExpression<T> middleOngoingSetResult;
+        SetExpression<T> middleOngoingSetResult;
 
         if (subBuilderResultNotEmpty) {
-            middleOngoingSetResult = subQueryExpression;
             if (builderResultNotEmpty) {
-                middleOngoingSetResult = getSetOperation(setOperation, blazeJPAQuery, middleOngoingSetResult);
+                middleOngoingSetResult = getSetOperation(setOperation, blazeJPAQuery, subQueryExpression);
+            } else {
+
+                middleOngoingSetResult = getSetOperation(setOperation, subQueryExpression);
             }
         } else if (builderResultNotEmpty) {
-            middleOngoingSetResult = blazeJPAQuery;
+            middleOngoingSetResult = getSetOperation(setOperation, blazeJPAQuery);
         } else {
-            return this;
+            throw new IllegalStateException();
         }
 
-        return new OngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(),
-                s -> finalizer.apply(s, this.operation), this.operation, middleOngoingSetResult);
+        return new OngoingFinalSetOperationCriteriaBuilderImpl<MiddleOngoingSetOperationCriteriaBuilder<X, Y, T>, T>(middleOngoingSetResult) {
+            @Override
+            public MiddleOngoingSetOperationCriteriaBuilder<X, Y, T> endSet() {
+                return  new OngoingSetOperationCriteriaBuilderImpl<>(StartOngoingSetOperationCriteriaBuilderImpl.this.blazeJPAQuery.createSubQuery(),
+                        s -> finalizer.apply(s, StartOngoingSetOperationCriteriaBuilderImpl.this.operation), StartOngoingSetOperationCriteriaBuilderImpl.this.operation, this.blazeJPAQuery);
+            }
+        };
+
     }
 
     @Override

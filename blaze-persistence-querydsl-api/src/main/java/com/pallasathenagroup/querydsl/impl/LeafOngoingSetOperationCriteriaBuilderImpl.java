@@ -8,8 +8,12 @@ import com.pallasathenagroup.querydsl.SetExpressionImpl;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 import com.querydsl.core.types.SubQueryExpression;
+
+import java.util.function.BiFunction;
 
 public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         extends AbstractCriteriaBuilder<T, LeafOngoingSetOperationCriteriaBuilder<T>>
@@ -100,11 +104,16 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_EXCEPT_ALL, getSetOperation(), blazeJPAQuery.createSubQuery());
     }
 
-    public LeafOngoingFinalSetOperationCriteriaBuilder<T> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
+    public OngoingFinalSetOperationCriteriaBuilder<LeafOngoingFinalSetOperationCriteriaBuilder<T>> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
         boolean subBuilderResultNotEmpty = subQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
 
         if (! subBuilderResultNotEmpty) {
-            return this;
+            return new OngoingFinalSetOperationCriteriaBuilderImpl<LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>(null) {
+                @Override
+                public LeafOngoingFinalSetOperationCriteriaBuilder<T> endSet() {
+                    return LeafOngoingSetOperationCriteriaBuilderImpl.this;
+                }
+            };
         }
 
         SubQueryExpression<T> lhs = this.lhs;
@@ -138,7 +147,13 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
             default:
                 throw new UnsupportedOperationException();
         }
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, union, blazeJPAQuery.createSubQuery());
+
+        return new OngoingFinalSetOperationCriteriaBuilderImpl<LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>(union) {
+            @Override
+            public LeafOngoingFinalSetOperationCriteriaBuilder<T> endSet() {
+                return  new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, union, LeafOngoingSetOperationCriteriaBuilderImpl.this.blazeJPAQuery.createSubQuery());
+            }
+        };
     }
 
     @Override
