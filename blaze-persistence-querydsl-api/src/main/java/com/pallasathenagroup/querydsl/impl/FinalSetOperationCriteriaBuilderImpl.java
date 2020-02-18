@@ -4,7 +4,7 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 
-public class FinalSetOperationCriteriaBuilderImpl<T> extends BaseFinalSetOperationCriteriaBuilderImpl<T, FinalSetOperationCriteriaBuilder<T>> implements FinalSetOperationCriteriaBuilder<T>  {
+public class FinalSetOperationCriteriaBuilderImpl<T> extends BaseFinalSetOperationCriteriaBuilderImpl<T, FinalSetOperationCriteriaBuilder<T>, T> implements FinalSetOperationCriteriaBuilder<T> {
 
     public FinalSetOperationCriteriaBuilderImpl(SetExpression<T> blazeJPAQuery) {
         super(blazeJPAQuery);

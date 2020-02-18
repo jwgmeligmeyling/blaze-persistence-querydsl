@@ -30,7 +30,7 @@ public class StartOngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
     }
 
     @Override
-    public OngoingFinalSetOperationCriteriaBuilder<Y, T> endSetWith() {
+    public OngoingFinalSetOperationCriteriaBuilder<Y> endSetWith() {
         throw new UnsupportedOperationException();
     }
 

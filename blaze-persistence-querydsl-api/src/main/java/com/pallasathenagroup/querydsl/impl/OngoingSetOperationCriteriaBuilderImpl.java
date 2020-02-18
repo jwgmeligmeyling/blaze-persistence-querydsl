@@ -64,7 +64,14 @@ public class OngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
 
 
     @Override
-    public OngoingFinalSetOperationCriteriaBuilder<Y, T> endSetWith() {
+    public OngoingFinalSetOperationCriteriaBuilder<Y> endSetWith() {
+        SetExpression<T> setOperation = null;
+        new OngoingFinalSetOperationCriteriaBuilderImpl<Y, T>(setOperation) {
+            @Override
+            public Y endSet() {
+                return super.endSet();
+            }
+        };
         throw new UnsupportedOperationException();
     }
 

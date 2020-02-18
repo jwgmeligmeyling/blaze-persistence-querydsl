@@ -13,39 +13,39 @@ import javax.annotation.Nullable;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-public abstract class BaseFinalSetOperationCriteriaBuilderImpl<T, Q extends BaseFinalSetOperationBuilder<T, Q>>
-        extends BaseFinalSetOperationBuilderImpl<T, Q>
-        implements BaseOngoingFinalSetOperationBuilder<T, Q> {
+public abstract class BaseFinalSetOperationCriteriaBuilderImpl<X, Y extends BaseFinalSetOperationBuilder<X, Y>, T>
+        extends BaseFinalSetOperationBuilderImpl<X, Y, T>
+        implements BaseOngoingFinalSetOperationBuilder<X, Y> {
 
     protected final SetExpression<T> blazeJPAQuery;
-    protected final Q self = (Q) this;
+    protected final Y self = (Y) this;
 
     public BaseFinalSetOperationCriteriaBuilderImpl(SetExpression<T> blazeJPAQuery) {
         this.blazeJPAQuery = blazeJPAQuery;
     }
 
-    public Q limit(long l) {
+    public Y limit(long l) {
         blazeJPAQuery.limit(l);
         return self;
     }
 
-    public Q offset(long l) {
+    public Y offset(long l) {
         blazeJPAQuery.offset(l);
         return self;
     }
 
-    public Q restrict(QueryModifiers queryModifiers) {
+    public Y restrict(QueryModifiers queryModifiers) {
 //        blazeJPAQuery.restrict(queryModifiers);
         return self;
     }
 
-    public Q orderBy(OrderSpecifier<?>... orderSpecifiers) {
+    public Y orderBy(OrderSpecifier<?>... orderSpecifiers) {
         blazeJPAQuery.orderBy(orderSpecifiers);
         return self;
     }
 
 
-    public <U> Q set(ParamExpression<U> paramExpression, U u) {
+    public <U> Y set(ParamExpression<U> paramExpression, U u) {
 //        blazeJPAQuery.set(paramExpression, u);
         return self;
     }
@@ -56,15 +56,13 @@ public abstract class BaseFinalSetOperationCriteriaBuilderImpl<T, Q extends Base
     }
 
 
-    public TypedQuery<T> getQuery() {
+    public TypedQuery<X> getQuery() {
         throw new UnsupportedOperationException();
     }
-
 
     public List<T> getResultList() {
         return blazeJPAQuery.fetch();
     }
-
 
     public T getSingleResult() {
         return blazeJPAQuery.fetchOne();
