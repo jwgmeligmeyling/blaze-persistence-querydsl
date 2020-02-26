@@ -1,13 +1,23 @@
 package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
+import com.blazebit.persistence.testsuite.base.jpa.category.NoDatanucleus;
+import com.blazebit.persistence.testsuite.base.jpa.category.NoEclipselink;
+import com.blazebit.persistence.testsuite.base.jpa.category.NoFirebird;
+import com.blazebit.persistence.testsuite.base.jpa.category.NoMySQL;
+import com.blazebit.persistence.testsuite.base.jpa.category.NoOpenJPA;
+import com.blazebit.persistence.testsuite.entity.Document;
+import com.blazebit.persistence.testsuite.entity.IntIdEntity;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCte;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCteB;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderEntity;
+import com.blazebit.persistence.testsuite.entity.Person;
+import com.blazebit.persistence.testsuite.entity.QDocument;
 import com.blazebit.persistence.testsuite.entity.RecursiveEntity;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
+import com.blazebit.persistence.testsuite.entity.Version;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
@@ -20,7 +30,9 @@ import com.pallasathenagroup.querydsl.impl.CriteriaBuilderImpl;
 import com.pallasathenagroup.querydsl.impl.LeafOngoingSetOperationCriteriaBuilderImpl;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Param;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -28,6 +40,7 @@ import org.junit.runners.Parameterized;
 import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -44,6 +57,10 @@ public class UnionTests extends AbstractCoreTest {
         protected Class<?>[] getEntityClasses() {
             return new Class<?>[] {
                     TestEntity.class, Author.class, Book.class, Publication.class, Publisher.class, IdHolderCte.class,
+                    Document.class,
+                    Person.class,
+                    IntIdEntity.class,
+                    Version.class,
                     RecursiveEntity.class,
                     TestCTE.class,
                     TestAdvancedCTE1.class,
@@ -537,6 +554,256 @@ public class UnionTests extends AbstractCoreTest {
             });
         }
 
+
+        @Test
+        public void testPrecedence() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+
+            FinalSetOperationCriteriaBuilder<String> cb = new CriteriaBuilderImpl<String>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1.name)
+                    .where(d1.name.eq("d1"))
+                    .intersect()
+                    .from(d2)
+                    .select(d2.name)
+                    .where(d2.name.ne("d2"))
+                    .except()
+                    .from(d3)
+                    .select(d3.name)
+                    .where(d3.name.eq("d3"))
+                    .endSet();
+            String expected = ""
+                    + "SELECT d1.name FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "INTERSECT\n"
+                    + "SELECT d2.name FROM Document d2 WHERE d2.name <> :param_1\n"
+                    + "EXCEPT\n"
+                    + "SELECT d3.name FROM Document d3 WHERE d3.name = :param_2";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+
+        @Test
+        public void testUnionAll() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.eq("d1"))
+                    .unionAll()
+
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.eq("d2"))
+                    .endSet();
+
+            String expected = ""
+                    + "SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "UNION ALL\n"
+                    + "SELECT d2 FROM Document d2 WHERE d2.name = :param_1";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+        @Test
+        public void testUnionAllOrderBy() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.eq("d1"))
+                    .unionAll()
+
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.eq("d2"))
+                    .endSet()
+                    .orderBy(Expressions.stringPath("name").asc());
+
+            String expected = ""
+                    + "SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "UNION ALL\n"
+                    + "SELECT d2 FROM Document d2 WHERE d2.name = :param_1\n"
+                    + "ORDER BY name ASC";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+        @Test
+        public void testUnionAllOrderByOperandLimit() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.eq("d1"))
+                    .unionAll()
+
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.ne("d2"))
+                    .orderBy(d2.name.asc()).limit(1L)
+                    .endSet()
+                    .orderBy(Expressions.stringPath("name").desc()).limit(1L);
+
+            String expected = ""
+                    + "SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "UNION ALL\n"
+                    + "SELECT d2 FROM Document d2 WHERE d2.name <> :param_1 ORDER BY d2.name ASC LIMIT 1\n"
+                    + "ORDER BY name DESC LIMIT 1";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+
+        @Test
+        @Category({ NoMySQL.class, NoFirebird.class, NoDatanucleus.class, NoEclipselink.class, NoOpenJPA.class })
+        public void testIntersectWithNestedUnion() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.ne("d1"))
+                    .startIntersect()
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.ne("d2"))
+                    .union()
+                    .from(d3)
+                    .select(d3)
+                    .where(d3.name.eq("d3"))
+                    .endSet()
+                    .endSet();
+            String expected = ""
+                    + "SELECT d1 FROM Document d1 WHERE d1.name <> :param_0\n"
+                    + "INTERSECT\n"
+                    + "(SELECT d2 FROM Document d2 WHERE d2.name <> :param_1\n"
+                    + "UNION\n"
+                    + "SELECT d3 FROM Document d3 WHERE d3.name = :param_2)";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+
+        @Test
+        @Category({ NoMySQL.class, NoFirebird.class, NoDatanucleus.class, NoEclipselink.class, NoOpenJPA.class })
+        public void testRightNesting() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+            QDocument d4 = new QDocument("d4");
+            QDocument d5 = new QDocument("d5");
+            QDocument d6 = new QDocument("d6");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.eq("d1"))
+                    .startExcept()
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.eq("d2"))
+                    .startUnion()
+                    .from(d3)
+                    .select(d3)
+                    .where(d3.name.eq("d3"))
+                    .union()
+                    .from(d4)
+                    .select(d4)
+                    .where(d4.name.eq("d4"))
+                    .endSet()
+                    .union()
+                    .from(d5)
+                    .select(d5)
+                    .where(d5.name.eq("d5"))
+                    .endSet()
+                    .union()
+                    .from(d6)
+                    .select(d6)
+                    .where(d6.name.eq("d6"))
+                    .endSet();
+            String expected = ""
+                    + "SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "EXCEPT\n"
+                    + "(SELECT d2 FROM Document d2 WHERE d2.name = :param_1\n"
+                    + "UNION\n"
+                    + "(SELECT d3 FROM Document d3 WHERE d3.name = :param_2\n"
+                    + "UNION\n"
+                    + "SELECT d4 FROM Document d4 WHERE d4.name = :param_3)\n"
+                    + "UNION\n"
+                    + "SELECT d5 FROM Document d5 WHERE d5.name = :param_4)\n"
+                    + "UNION\n"
+                    + "SELECT d6 FROM Document d6 WHERE d6.name = :param_5";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
+
+        @Test
+        @Ignore("Left nested sets are currently not supported, nor are they supported in QueryDSL SQL")
+        @Category({ NoMySQL.class, NoFirebird.class, NoDatanucleus.class, NoEclipselink.class, NoOpenJPA.class })
+        public void testLeftNesting() {
+            QDocument d1 = new QDocument("d1");
+            QDocument d2 = new QDocument("d2");
+            QDocument d3 = new QDocument("d3");
+            QDocument d4 = new QDocument("d4");
+            QDocument d5 = new QDocument("d5");
+            QDocument d6 = new QDocument("d6");
+
+            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+                    .startSet()
+                    .startSet()
+                    .startSet()
+                    .from(d1)
+                    .select(d1)
+                    .where(d1.name.eq("D1"))
+                    .intersect()
+                    .from(d2)
+                    .select(d2)
+                    .where(d2.name.eq("D2"))
+                    .endSet()
+                    .union()
+                    .from(d3)
+                    .select(d3)
+                    .where(d3.name.eq("D3"))
+                    .endSet()
+                    .union()
+                    .from(d4)
+                    .select(d4)
+                    .where(d4.name.eq("D4"))
+                    .endSet()
+                    .union()
+                    .from(d5)
+                    .select(d5)
+                    .where(d5.name.eq("D5"))
+                    .endSet();
+            String expected = ""
+                    + "(((SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
+                    + "INTERSECT\n"
+                    + "SELECT d2 FROM Document d2 WHERE d2.name = :param_1)\n"
+                    + "UNION\n"
+                    + "SELECT d3 FROM Document d3 WHERE d3.name = :param_2)\n"
+                    + "UNION\n"
+                    + "SELECT d4 FROM Document d4 WHERE d4.name = :param_3)\n"
+                    + "UNION\n"
+                    + "SELECT d5 FROM Document d5 WHERE d5.name = :param_4";
+
+            assertEquals(expected, cb.getQueryString());
+        }
+
         @Test
         public void testDeepNesting() {
             Param<Long> a = new Param<>(Long.class, "a");
@@ -601,7 +868,71 @@ public class UnionTests extends AbstractCoreTest {
                 Param<Long> l = new Param<>(Long.class, "l");
 
 
-                LeafOngoingFinalSetOperationCriteriaBuilder<Book> bookLeafOngoingFinalSetOperationCriteriaBuilder = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
+                String queryString2 = cbf.create(em, Book.class)
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":a")
+                        .unionAll()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":b")
+                        .except()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":c")
+                        .startUnion()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":d")
+                        .intersect()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":e")
+                        .startUnion()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":f")
+                        .intersect()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":g")
+                        .endSetWith()
+                        .orderByAsc("name").setMaxResults(1)
+                        .endSet()
+//                        .startExcept()
+//                        .endSet()
+                        .startExceptAll()
+                        .startIntersect()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":h")
+                        .unionAll()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":i")
+                        .endSet()
+                        .except()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":j")
+                        .endSet()
+
+                        .intersect()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":k")
+                        .endSet()
+                        .intersect()
+                        .select("book").from(Book.class, "book").where("book.id").gtExpression(":l")
+                        .endSet()
+                        .orderByAsc("name")
+                        .getQueryString();
+
+                assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
+                        "UNION ALL\n" +
+                        "SELECT book FROM Book book WHERE book.id > :b\n" +
+                        "EXCEPT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :c\n" +
+                        "UNION\n" +
+                        "(SELECT book FROM Book book WHERE book.id > :d\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :e\n" +
+                        "UNION\n" +
+                        "(SELECT book FROM Book book WHERE book.id > :f\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :g\n" +
+                        "ORDER BY name ASC NULLS LAST LIMIT 1)\n" +
+                        "EXCEPT ALL\n" +
+                        "((SELECT book FROM Book book WHERE book.id > :h\n" +
+                        "UNION ALL\n" +
+                        "SELECT book FROM Book book WHERE book.id > :i)\n" +
+                        "EXCEPT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :j)\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :k)\n" +
+                        "INTERSECT\n" +
+                        "SELECT book FROM Book book WHERE book.id > :l\n" +
+                        "ORDER BY name ASC NULLS LAST", queryString2);
+
+                FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
                         .unionAll()
                         .select(book).from(book).where(book.id.gt(b))
                         .except()
@@ -615,7 +946,7 @@ public class UnionTests extends AbstractCoreTest {
                         .intersect()
                         .select(book).from(book).where(book.id.gt(g))
                         .endSetWith()
-                        .orderBy(book.name.asc()).limit(1)
+                        .orderBy(Expressions.stringPath("name").asc()).limit(1)
                         .endSet()
                         .startExcept()
                         .endSet()
@@ -631,11 +962,8 @@ public class UnionTests extends AbstractCoreTest {
 
                         .intersect()
                         .select(book).from(book).where(book.id.gt(k))
-                        .endSet();
-
-                FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder =
-                        bookLeafOngoingFinalSetOperationCriteriaBuilder
-                                    .intersect()
+                        .endSet()
+                        .intersect()
                                         .select(book).from(book).where(book.id.gt(l))
                                 .endSet()
                             .orderBy(Expressions.stringPath("name").asc());
@@ -655,7 +983,8 @@ public class UnionTests extends AbstractCoreTest {
                         "UNION\n" +
                         "(SELECT book FROM Book book WHERE book.id > :f\n" +
                         "INTERSECT\n" +
-                        "SELECT book FROM Book book WHERE book.id > :g)\n" +
+                        "SELECT book FROM Book book WHERE book.id > :g\n" +
+                        "ORDER BY name ASC NULLS LAST LIMIT 1)\n" +
                         "EXCEPT ALL\n" +
                         "(SELECT book FROM Book book WHERE book.id > :h\n" +
                         "UNION ALL\n" +
