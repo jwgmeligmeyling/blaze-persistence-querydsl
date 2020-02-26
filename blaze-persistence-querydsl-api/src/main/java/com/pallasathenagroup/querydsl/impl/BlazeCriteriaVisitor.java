@@ -45,6 +45,7 @@ import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.NamedWindow;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
+import com.pallasathenagroup.querydsl.SetOperationFlag;
 import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
@@ -78,12 +79,14 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
+import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
 public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
@@ -139,6 +142,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     public Object serializeSubQuery(Object criteriaBuilder, Expression<?> expression) {
         Object result = expression.accept(new Visitor<Object, Object>() {
+
             @Override
             public Object visit(Constant<?> constant, Object criteriaBuilder) {
                 throw new UnsupportedOperationException();
@@ -185,6 +189,11 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 if (isNestedSet) {
                     OngoingSetOperationBuilder<?, ?, ?> setBuilder1 = (OngoingSetOperationBuilder<?, ?, ?>) setBuilder;
                     BaseOngoingFinalSetOperationBuilder<?, ?> baseOngoingFinalSetOperationBuilder = setBuilder1.endSetWith();
+                    SubQueryExpression<?> setOperationSubQuery = setOperation.getArg(1).accept(GetSubqueryVisitor.INSTANCE, null);
+                    if (setOperationSubQuery != null) {
+                        renderOrderBy(setOperationSubQuery.getMetadata(), baseOngoingFinalSetOperationBuilder);
+                        renderModifiers(setOperationSubQuery.getMetadata().getModifiers(), baseOngoingFinalSetOperationBuilder);
+                    }
                     return baseOngoingFinalSetOperationBuilder.endSet();
                 }
                 return setBuilder;
@@ -203,6 +212,11 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             @Override
             public Object visit(SubQueryExpression<?> subQuery, Object criteriaBuilder) {
                 QueryMetadata subQueryMetadata = subQuery.getMetadata();
+
+                Optional<QueryFlag> setOperation = subQueryMetadata.getFlags().stream().filter(flag -> flag.getPosition().equals(Position.START_OVERRIDE)).findAny();
+                if (setOperation.isPresent()) {
+                    return setOperation.get().getFlag().accept(this, criteriaBuilder);
+                }
 
                 renderCTEs(subQueryMetadata);
 
@@ -769,6 +783,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                     if (recursive) {
                         Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
+                        if (unionOperation == null) {
+                            SubQueryExpression<?> setSubquery = args.get(1).accept(GetSubqueryVisitor.INSTANCE, null);
+                            QueryFlag setFlag = getSetOperationFlag(setSubquery.getMetadata());
+                            unionOperation = setFlag.getFlag().accept(GetOperationVisitor.INSTANCE, null);
+                        }
+
                         SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
                         SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
                                 (SelectRecursiveCTECriteriaBuilder<?>)
@@ -905,6 +925,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
         @Override
         public SubQueryExpression<?> visit(SubQueryExpression<?> subQueryExpression, Object o) {
+            SetOperationFlag setOperationFlag = getSetOperationFlag(subQueryExpression.getMetadata());
+            if (setOperationFlag != null) {
+                return setOperationFlag.getFlag().accept(this, o);
+            }
             return subQueryExpression;
         }
     }

@@ -1,5 +1,6 @@
 package com.pallasathenagroup.querydsl.impl;
 
+import com.querydsl.core.QueryFlag;
 import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.SubQueryExpression;
 
@@ -14,6 +15,9 @@ public class NotEmptySetVisitor extends DefaultVisitorImpl<Boolean, Void> {
 
     @Override
     public Boolean visit(SubQueryExpression<?> subQueryExpression, Void aVoid) {
-        return !subQueryExpression.getMetadata().getJoins().isEmpty();
+        return subQueryExpression.getMetadata().getFlags().stream()
+                .anyMatch(flag -> flag.getPosition().equals(QueryFlag.Position.START_OVERRIDE) &&
+                        flag.getFlag().accept(NotEmptySetVisitor.this, aVoid)) ||
+                !subQueryExpression.getMetadata().getJoins().isEmpty();
     }
 }

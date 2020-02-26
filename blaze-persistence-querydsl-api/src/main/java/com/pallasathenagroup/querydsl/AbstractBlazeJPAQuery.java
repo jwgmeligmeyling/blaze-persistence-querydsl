@@ -44,9 +44,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
 
-    @Nullable
-    protected Expression<?> union;
-
     protected boolean cachable = false;
 
     public AbstractBlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
@@ -77,15 +74,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     public AbstractBlazeJPAQuery(EntityManager em, JPQLTemplates templates, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
         super(em, templates, metadata);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
-    }
-
-    @Override
-    public <R,C> R accept(Visitor<R,C> v, @Nullable C context) {
-        if (union != null) {
-            return union.accept(v, context);
-        } else {
-            return super.accept(v, context);
-        }
     }
 
     @Override
@@ -227,7 +215,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     protected void clone(Q query) {
         super.clone(query);
         this.cachable = query.cachable;
-        this.union = query.union;
     }
 
     // Work around private access to query(...)
@@ -411,7 +398,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             }
         }
 
-        this.union = SetUtils.setOperation(operator, sq.toArray(new Expression[0]));
+        this.queryMixin.addFlag(new SetOperationFlag(SetUtils.setOperation(operator, sq.toArray(new Expression[0]))));
         return new SetExpressionImpl(this);
     }
 
