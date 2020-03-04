@@ -7,7 +7,6 @@ import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.Queryable;
 import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
-import com.pallasathenagroup.querydsl.impl.NotEmptySetVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.JoinFlag;
 import com.querydsl.core.NonUniqueResultException;
@@ -22,7 +21,6 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.MapExpression;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.SubQueryExpression;
-import com.querydsl.core.types.Visitor;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
@@ -390,12 +388,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");
-        }
-
-        for (SubQueryExpression<RT> rtSubQueryExpression : sq) {
-            if (! rtSubQueryExpression.accept(NotEmptySetVisitor.INSTANCE, null)) {
-                throw new AssertionError();
-            }
         }
 
         this.queryMixin.addFlag(new SetOperationFlag(SetUtils.setOperation(operator, sq.toArray(new Expression[0]))));

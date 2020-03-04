@@ -23,7 +23,8 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>blaze-persistence-querydsl-impl</artifactId>
             <version>${project.version}</version>
-            <scope>runtime</scope>
+            <!-- todo: should be runtime -->
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.blazebit</groupId>
