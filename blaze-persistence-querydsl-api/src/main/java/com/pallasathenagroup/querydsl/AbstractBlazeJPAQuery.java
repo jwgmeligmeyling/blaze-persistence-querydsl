@@ -384,7 +384,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     // Union stuff
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private <RT> SetExpression<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");

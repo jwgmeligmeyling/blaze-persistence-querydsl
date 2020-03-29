@@ -753,7 +753,6 @@ public class UnionTests extends AbstractCoreTest {
 
 
         @Test
-        @Ignore("Left nested sets are currently not supported, nor are they supported in QueryDSL SQL")
         @Category({ NoMySQL.class, NoFirebird.class, NoDatanucleus.class, NoEclipselink.class, NoOpenJPA.class })
         public void testLeftNesting() {
             QDocument d1 = new QDocument("d1");
@@ -774,32 +773,39 @@ public class UnionTests extends AbstractCoreTest {
                     .from(d2)
                     .select(d2)
                     .where(d2.name.eq("D2"))
+                    .endSetWith()
+                    .limit(1)
                     .endSet()
                     .union()
                     .from(d3)
                     .select(d3)
                     .where(d3.name.eq("D3"))
+                    .endSetWith()
+                    .limit(2)
                     .endSet()
                     .union()
                     .from(d4)
                     .select(d4)
                     .where(d4.name.eq("D4"))
+                    .endSetWith()
+                    .limit(3)
                     .endSet()
                     .union()
                     .from(d5)
                     .select(d5)
                     .where(d5.name.eq("D5"))
-                    .endSet();
+                    .endSet()
+                    .limit(4);
             String expected = ""
                     + "(((SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
                     + "INTERSECT\n"
-                    + "SELECT d2 FROM Document d2 WHERE d2.name = :param_1)\n"
+                    + "SELECT d2 FROM Document d2 WHERE d2.name = :param_1 LIMIT 1)\n"
                     + "UNION\n"
-                    + "SELECT d3 FROM Document d3 WHERE d3.name = :param_2)\n"
+                    + "SELECT d3 FROM Document d3 WHERE d3.name = :param_2 LIMIT 2)\n"
                     + "UNION\n"
-                    + "SELECT d4 FROM Document d4 WHERE d4.name = :param_3)\n"
+                    + "SELECT d4 FROM Document d4 WHERE d4.name = :param_3 LIMIT 3)\n"
                     + "UNION\n"
-                    + "SELECT d5 FROM Document d5 WHERE d5.name = :param_4";
+                    + "SELECT d5 FROM Document d5 WHERE d5.name = :param_4 LIMIT 4";
 
             assertEquals(expected, cb.getQueryString());
         }

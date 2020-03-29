@@ -8,6 +8,9 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 
 public enum JPQLNextOps implements Operator {
     PAGE_POSITION(Long.class),
@@ -18,6 +21,12 @@ public enum JPQLNextOps implements Operator {
     SET_INTERSECT_ALL(Object.class),
     SET_EXCEPT(Object.class),
     SET_EXCEPT_ALL(Object.class),
+    LEFT_NESTED_SET_UNION(Object.class),
+    LEFT_NESTED_SET_UNION_ALL(Object.class),
+    LEFT_NESTED_SET_INTERSECT(Object.class),
+    LEFT_NESTED_SET_INTERSECT_ALL(Object.class),
+    LEFT_NESTED_SET_EXCEPT(Object.class),
+    LEFT_NESTED_SET_EXCEPT_ALL(Object.class),
     GROUP_CONCAT(String.class),
     WINDOW_GROUP_CONCAT(String.class),
     GREATEST(Object.class),
@@ -68,9 +77,31 @@ public enum JPQLNextOps implements Operator {
     TREAT_TIME(Time.class),
     TREAT_DATE(Date.class),
     TREAT_TIMESTAMP(Timestamp.class),
-    TREAT_CALENDAR(Calendar.class),
+    TREAT_CALENDAR(Calendar.class);
 
-    ;
+    public static final Set<JPQLNextOps> LEFT_NESTED_SET_OPERATIONS = Collections.unmodifiableSet(EnumSet.of(
+            JPQLNextOps.LEFT_NESTED_SET_UNION,
+            JPQLNextOps.LEFT_NESTED_SET_UNION_ALL,
+            JPQLNextOps.LEFT_NESTED_SET_INTERSECT,
+            JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL,
+            JPQLNextOps.LEFT_NESTED_SET_EXCEPT,
+            JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL
+    ));
+
+    public static final Set<JPQLNextOps> SET_OPERATIONS = Collections.unmodifiableSet(EnumSet.of(
+            JPQLNextOps.SET_UNION,
+            JPQLNextOps.SET_UNION_ALL,
+            JPQLNextOps.SET_INTERSECT,
+            JPQLNextOps.SET_INTERSECT_ALL,
+            JPQLNextOps.SET_EXCEPT,
+            JPQLNextOps.SET_EXCEPT_ALL,
+            JPQLNextOps.LEFT_NESTED_SET_UNION,
+            JPQLNextOps.LEFT_NESTED_SET_UNION_ALL,
+            JPQLNextOps.LEFT_NESTED_SET_INTERSECT,
+            JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL,
+            JPQLNextOps.LEFT_NESTED_SET_EXCEPT,
+            JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL
+    ));
 
     private final Class<?> type;
 

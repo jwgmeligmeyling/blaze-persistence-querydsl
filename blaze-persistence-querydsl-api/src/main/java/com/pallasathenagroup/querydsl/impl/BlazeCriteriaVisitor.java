@@ -17,9 +17,12 @@ import com.blazebit.persistence.GroupByBuilder;
 import com.blazebit.persistence.HavingBuilder;
 import com.blazebit.persistence.JoinOnBuilder;
 import com.blazebit.persistence.JoinType;
+import com.blazebit.persistence.LeafOngoingFinalSetOperationCriteriaBuilder;
+import com.blazebit.persistence.LeafOngoingSetOperationCriteriaBuilder;
 import com.blazebit.persistence.LimitBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
+import com.blazebit.persistence.OngoingFinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.OngoingSetOperationBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
@@ -29,6 +32,7 @@ import com.blazebit.persistence.SelectBuilder;
 import com.blazebit.persistence.SelectCTECriteriaBuilder;
 import com.blazebit.persistence.SelectRecursiveCTECriteriaBuilder;
 import com.blazebit.persistence.SetOperationBuilder;
+import com.blazebit.persistence.StartOngoingSetOperationBuilder;
 import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
@@ -37,6 +41,7 @@ import com.blazebit.persistence.WindowFrameBetweenBuilder;
 import com.blazebit.persistence.WindowFrameBuilder;
 import com.blazebit.persistence.WindowFrameExclusionBuilder;
 import com.blazebit.persistence.parser.EntityMetamodel;
+import com.blazebit.persistence.parser.expression.SubqueryExpression;
 import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
 import com.blazebit.persistence.spi.ExtendedAttribute;
@@ -84,6 +89,7 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
+import static com.pallasathenagroup.querydsl.JPQLNextOps.LEFT_NESTED_SET_OPERATIONS;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
@@ -153,50 +159,93 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 throw new UnsupportedOperationException();
             }
 
+            private SubQueryExpression<?> setSubQuery;
+
             @Override
             public Object visit(Operation<?> setOperation, Object criteriaBuilder) {
-                criteriaBuilder = setOperation.getArg(0).accept(this, criteriaBuilder);
+                Expression<?> lhs = setOperation.getArg(0);
+                SubQueryExpression<?> lhsSubquery = lhs.accept(GetSubqueryVisitor.INSTANCE, null);
+                SetOperationFlag setOperationFlag = lhsSubquery != null ? getSetOperationFlag(lhsSubquery.getMetadata()) : null;
+                boolean lhsNestedSet = setOperationFlag != null && LEFT_NESTED_SET_OPERATIONS.contains(setOperation.getOperator());
+
+                if (lhsNestedSet) {
+                    if (criteriaBuilder instanceof StartOngoingSetOperationBuilder) {
+                        StartOngoingSetOperationBuilder<?, ?, ?> ob = (StartOngoingSetOperationBuilder<?, ?, ?>) criteriaBuilder;
+                        criteriaBuilder = ob.startSet();
+                    } else {
+                        criteriaBuilder = criteriaBuilderFactory.startSet(entityManager, Object.class);
+                    }
+
+                    criteriaBuilder = setOperationFlag.getFlag().accept(this, criteriaBuilder);
+
+                    if (criteriaBuilder instanceof OngoingSetOperationBuilder) {
+                        criteriaBuilder = ((OngoingSetOperationBuilder<?, ?, ?>) criteriaBuilder).endSetWith();
+                        renderOrderBy(lhsSubquery.getMetadata(), (OrderByBuilder<?>) criteriaBuilder);
+                        renderModifiers(lhsSubquery.getMetadata().getModifiers(), (LimitBuilder<?>) criteriaBuilder);
+                        criteriaBuilder = ((BaseOngoingFinalSetOperationBuilder) criteriaBuilder).endSet();
+                    } else {
+                        throw new UnsupportedOperationException();
+                    }
+                } else {
+                    criteriaBuilder = lhs.accept(this, criteriaBuilder);
+                }
+
+                Expression<?> rhs = setOperation.getArg(1);
+                SubQueryExpression<?> rhsSubquery = rhs.accept(GetSubqueryVisitor.INSTANCE, null);
+                setOperationFlag = rhsSubquery != null ? getSetOperationFlag(rhsSubquery.getMetadata()) : null;
+                boolean isNestedSet = setOperationFlag != null;
                 SetOperationBuilder<?,?> setOperationBuilder = (SetOperationBuilder<?,?>) criteriaBuilder;
-                Object setBuilder = null;
-                boolean isNestedSet = setOperation.getArg(1) instanceof Operation<?> || setOperation.getArg(1) instanceof SetExpressionImpl;
+
                 switch ((JPQLNextOps) setOperation.getOperator()) {
                     case SET_UNION:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_UNION:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startUnion() : setOperationBuilder.union();
                         break;
                     case SET_UNION_ALL:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_UNION_ALL:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startUnionAll() : setOperationBuilder.unionAll();
                         break;
                     case SET_EXCEPT:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_EXCEPT:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startExcept() : setOperationBuilder.except();
                         break;
                     case SET_EXCEPT_ALL:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_EXCEPT_ALL:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startExceptAll() : setOperationBuilder.exceptAll();
                         break;
                     case SET_INTERSECT:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_INTERSECT:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startIntersect() : setOperationBuilder.intersect();
                         break;
                     case SET_INTERSECT_ALL:
-                        setBuilder = isNestedSet ?
+                    case LEFT_NESTED_SET_INTERSECT_ALL:
+                        criteriaBuilder = isNestedSet ?
                                 setOperationBuilder.startIntersectAll() : setOperationBuilder.intersectAll();
                         break;
+                    default: throw new UnsupportedOperationException("No support for set operation " + setOperation.getOperator());
                 }
-                setBuilder = setOperation.getArg(1).accept(this, setBuilder);
+
                 if (isNestedSet) {
-                    OngoingSetOperationBuilder<?, ?, ?> setBuilder1 = (OngoingSetOperationBuilder<?, ?, ?>) setBuilder;
-                    BaseOngoingFinalSetOperationBuilder<?, ?> baseOngoingFinalSetOperationBuilder = setBuilder1.endSetWith();
-                    SubQueryExpression<?> setOperationSubQuery = setOperation.getArg(1).accept(GetSubqueryVisitor.INSTANCE, null);
-                    if (setOperationSubQuery != null) {
-                        renderOrderBy(setOperationSubQuery.getMetadata(), baseOngoingFinalSetOperationBuilder);
-                        renderModifiers(setOperationSubQuery.getMetadata().getModifiers(), baseOngoingFinalSetOperationBuilder);
+                    criteriaBuilder = setOperationFlag.getFlag().accept(this, criteriaBuilder);
+
+                    if (criteriaBuilder instanceof OngoingSetOperationBuilder) {
+                        criteriaBuilder = ((OngoingSetOperationBuilder<?, ?, ?>) criteriaBuilder).endSetWith();
+                        renderOrderBy(rhsSubquery.getMetadata(), (OrderByBuilder<?>) criteriaBuilder);
+                        renderModifiers(rhsSubquery.getMetadata().getModifiers(), (LimitBuilder<?>) criteriaBuilder);
+                        criteriaBuilder = ((BaseOngoingFinalSetOperationBuilder) criteriaBuilder).endSet();
+                    } else {
+                        throw new UnsupportedOperationException();
                     }
-                    return baseOngoingFinalSetOperationBuilder.endSet();
+                } else {
+                    criteriaBuilder = rhs.accept(this, criteriaBuilder);
                 }
-                return setBuilder;
+
+                return criteriaBuilder;
             }
 
             @Override
@@ -215,6 +264,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                 Optional<QueryFlag> setOperation = subQueryMetadata.getFlags().stream().filter(flag -> flag.getPosition().equals(Position.START_OVERRIDE)).findAny();
                 if (setOperation.isPresent()) {
+                    this.setSubQuery = subQuery;
                     return setOperation.get().getFlag().accept(this, criteriaBuilder);
                 }
 
@@ -832,9 +882,14 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 case SET_INTERSECT_ALL:
                 case SET_EXCEPT:
                 case SET_EXCEPT_ALL:
+                case LEFT_NESTED_SET_UNION:
+                case LEFT_NESTED_SET_UNION_ALL:
+                case LEFT_NESTED_SET_INTERSECT:
+                case LEFT_NESTED_SET_INTERSECT_ALL:
+                case LEFT_NESTED_SET_EXCEPT:
+                case LEFT_NESTED_SET_EXCEPT_ALL:
                     renderSubQueryExpression(expr);
                     return null;
-
             }
         }
 

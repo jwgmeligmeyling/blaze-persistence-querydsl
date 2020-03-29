@@ -13,6 +13,8 @@ import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilde
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 import com.querydsl.core.types.SubQueryExpression;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.BiFunction;
 
 public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
@@ -22,11 +24,13 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
 
     protected final JPQLNextOps operation;
     protected final SubQueryExpression<T> lhs;
+    protected final boolean leftNested;
 
-    public LeafOngoingSetOperationCriteriaBuilderImpl(JPQLNextOps operation, SubQueryExpression<T> lhs, BlazeJPAQuery<T> blazeJPAQuery) {
+    public LeafOngoingSetOperationCriteriaBuilderImpl(JPQLNextOps operation, SubQueryExpression<T> lhs, BlazeJPAQuery<T> blazeJPAQuery, boolean leftNested) {
         super(blazeJPAQuery);
         this.operation = operation;
         this.lhs = lhs;
+        this.leftNested = leftNested;
     }
 
     @Override
@@ -46,24 +50,8 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
     public SetExpression<T> getSetOperation() {
         boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
         if (builderResultNotEmpty) {
-
             BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-            switch (operation) {
-                case SET_UNION:
-                    return subQuery.union(lhs, blazeJPAQuery);
-                case SET_UNION_ALL:
-                    return subQuery.unionAll(lhs, blazeJPAQuery);
-                case SET_INTERSECT:
-                    return subQuery.intersect(lhs, blazeJPAQuery);
-                case SET_INTERSECT_ALL:
-                    return subQuery.intersectAll(lhs, blazeJPAQuery);
-                case SET_EXCEPT:
-                    return subQuery.except(lhs, blazeJPAQuery);
-                case SET_EXCEPT_ALL:
-                    return subQuery.exceptAll(lhs, blazeJPAQuery);
-                default:
-                    throw new UnsupportedOperationException();
-            }
+            return subQuery.setOperation(operation, Collections.unmodifiableList(Arrays.asList(lhs, blazeJPAQuery)));
         }
         if (lhs instanceof SetExpression) {
             return (SetExpression<T>) lhs;
@@ -76,32 +64,32 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> union() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_UNION, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_UNION : JPQLNextOps.SET_UNION, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> unionAll() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_UNION_ALL, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_UNION_ALL : JPQLNextOps.SET_UNION_ALL, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> intersect() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_INTERSECT, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_INTERSECT : JPQLNextOps.SET_INTERSECT, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> intersectAll() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_INTERSECT_ALL, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL : JPQLNextOps.SET_INTERSECT_ALL, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> except() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_EXCEPT, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_EXCEPT : JPQLNextOps.SET_EXCEPT, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     @Override
     public LeafOngoingSetOperationCriteriaBuilder<T> exceptAll() {
-        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(JPQLNextOps.SET_EXCEPT_ALL, getSetOperation(), blazeJPAQuery.createSubQuery());
+        return new LeafOngoingSetOperationCriteriaBuilderImpl<>(leftNested ? JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL : JPQLNextOps.SET_EXCEPT_ALL, getSetOperation(), blazeJPAQuery.createSubQuery(), false);
     }
 
     public OngoingFinalSetOperationCriteriaBuilder<LeafOngoingFinalSetOperationCriteriaBuilder<T>> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {
@@ -124,65 +112,43 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         }
 
         BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-        SetExpression<T> union;
-        switch (setOperation) {
-            case SET_UNION:
-                union = subQuery.union(lhs, subQueryExpression);
-                break;
-            case SET_UNION_ALL:
-                union = subQuery.unionAll(lhs, subQueryExpression);
-                break;
-            case SET_INTERSECT:
-                union = subQuery.intersect(lhs, subQueryExpression);
-                break;
-            case SET_INTERSECT_ALL:
-                union = subQuery.intersectAll(lhs, subQueryExpression);
-                break;
-            case SET_EXCEPT:
-                union = subQuery.except(lhs, subQueryExpression);
-                break;
-            case SET_EXCEPT_ALL:
-                union = subQuery.exceptAll(lhs, subQueryExpression);
-                break;
-            default:
-                throw new UnsupportedOperationException();
-        }
+        SetExpression<T> union = subQuery.setOperation(setOperation, Collections.unmodifiableList(Arrays.asList(lhs, subQueryExpression)));
 
         return new OngoingFinalSetOperationCriteriaBuilderImpl<LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>(union) {
             @Override
             public LeafOngoingFinalSetOperationCriteriaBuilder<T> endSet() {
-                return  new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, union, LeafOngoingSetOperationCriteriaBuilderImpl.this.blazeJPAQuery.createSubQuery());
+                return  new LeafOngoingSetOperationCriteriaBuilderImpl<T>(setOperation, union, LeafOngoingSetOperationCriteriaBuilderImpl.this.blazeJPAQuery.createSubQuery(), leftNested);
             }
         };
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startUnion() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_UNION, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_UNION : JPQLNextOps.SET_UNION, this::endWith, false);
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startUnionAll() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_UNION_ALL, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_UNION_ALL : JPQLNextOps.SET_UNION_ALL, this::endWith, false);
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startIntersect() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_INTERSECT, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_INTERSECT : JPQLNextOps.SET_INTERSECT, this::endWith, false);
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startIntersectAll() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_INTERSECT_ALL, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL : JPQLNextOps.SET_INTERSECT_ALL, this::endWith, false);
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startExcept() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_EXCEPT, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_EXCEPT : JPQLNextOps.SET_EXCEPT, this::endWith, false);
     }
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startExceptAll() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), JPQLNextOps.SET_EXCEPT_ALL, this::endWith);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL : JPQLNextOps.SET_EXCEPT_ALL, this::endWith, false);
     }
 }
