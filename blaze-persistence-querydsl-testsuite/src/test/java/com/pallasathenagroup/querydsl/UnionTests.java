@@ -1,5 +1,6 @@
 package com.pallasathenagroup.querydsl;
 
+import com.blazebit.persistence.SetOperationBuilder;
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
 import com.blazebit.persistence.testsuite.base.jpa.category.NoDatanucleus;
 import com.blazebit.persistence.testsuite.base.jpa.category.NoEclipselink;
@@ -19,18 +20,15 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.entity.Version;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
+import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingSetOperationCriteriaBuilder;
-import com.pallasathenagroup.querydsl.api.SetOperationBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
-import com.pallasathenagroup.querydsl.impl.CriteriaBuilderImpl;
-import com.pallasathenagroup.querydsl.impl.LeafOngoingSetOperationCriteriaBuilderImpl;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Param;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.experimental.runners.Enclosed;
@@ -40,7 +38,6 @@ import org.junit.runners.Parameterized;
 import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -84,29 +81,29 @@ public class UnionTests extends AbstractCoreTest {
 
 
     @RunWith(Parameterized.class)
-    public static class CriteriaBuilderImplTests extends AbstractUnionTest {
+    public static class CriteriaBuilderTests extends AbstractUnionTest {
 
         @Parameterized.Parameters(name = "{0}")
         public static Collection<Object[]> data() {
             return Arrays.asList(new Object[][]{
-                    {"UNION", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnion, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnion, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::union, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnion, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::union, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnion},
-                    {"UNION ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::unionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::unionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnionAll},
-                    {"INTERSECT", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersect, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersect},
-                    {"INTERSECT ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersectAll},
-                    {"EXCEPT", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExcept, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExcept, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::except, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExcept, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::except, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExcept},
-                    {"EXCEPT ALL", (Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<LeafOngoingSetOperationCriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::exceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::exceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExceptAll},
+                    {"UNION", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::union, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnion, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnion, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::union, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnion, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::union, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnion},
+                    {"UNION ALL", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::unionAll, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::unionAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::unionAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startUnionAll},
+                    {"INTERSECT", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersect, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersect, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersect, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersect, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersect},
+                    {"INTERSECT ALL", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::intersectAll, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersectAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::intersectAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startIntersectAll},
+                    {"EXCEPT", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::except, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExcept, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExcept, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::except, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExcept, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::except, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExcept},
+                    {"EXCEPT ALL", (Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>>) SetOperationBuilder::exceptAll, (Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::exceptAll, (Function<StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>>) SetOperationBuilder::exceptAll, (Function<OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book>>) SetOperationBuilder::startExceptAll},
             });
         }
 
 
         @Parameterized.Parameter(1)
-        public Function<CriteriaBuilderImpl<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>> criteriaBuilderSetFunction;
+        public Function<CriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>> criteriaBuilderSetFunction;
 
         @Parameterized.Parameter(2)
         public Function<LeafOngoingSetOperationCriteriaBuilder<Book>, LeafOngoingSetOperationCriteriaBuilder<Book>> leafOngoingSetFunction;
 
         @Parameterized.Parameter(3)
-        public Function<CriteriaBuilderImpl<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>> criteriaBuilderStartSetFunction;
+        public Function<CriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>> criteriaBuilderStartSetFunction;
 
         @Parameterized.Parameter(4)
         public Function<LeafOngoingSetOperationCriteriaBuilder<Book>, StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>> leafOngoingSetStartSetFunction;
@@ -130,9 +127,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testCriteriaBuilderEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             String queryString = criteriaBuilderSetFunction.apply(where).endSet().getQueryString();
             assertEquals("SELECT book FROM Book book WHERE book.id > :a", queryString);
@@ -141,9 +138,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testCriteriaBuilderSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
@@ -156,9 +153,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testLeafOngoingSetOperationBuilderSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
@@ -177,9 +174,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testLeafOngoingSetOperationBuilderEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
@@ -194,9 +191,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testCriteriaBuilderStartRhsSet() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             StartOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> apply = criteriaBuilderStartSetFunction.apply(where);
             OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> where1 =
@@ -214,9 +211,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testLeafOngoingSetOperationBuilderStartRhsSet() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -240,9 +237,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testLeafOngoingSetOperationBuilderStartRhsEmptySet() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -260,9 +257,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testStartOngoingSetOperationBuilderSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -291,9 +288,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testStartOngoingSetOperationBuilderEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -315,9 +312,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testStartOngoingSetOperationBuilderNestedSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -343,9 +340,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testStartOngoingSetOperationBuilderNestedEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             LeafOngoingSetOperationCriteriaBuilder<Book> leafOngoingSetOperationCriteriaBuilder =
                     where.union().select(book).from(book).where(book.id.gt(b));
@@ -370,9 +367,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testOngoingSetOperationBuilderSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> union = where
                     .startUnion().select(book).from(book).where(book.id.gt(b))
@@ -401,9 +398,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testOngoingSetOperationBuilderEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> union = where
                     .startUnion().select(book).from(book).where(book.id.gt(b))
@@ -429,9 +426,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testOngoingSetOperationBuilderNestedSetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> union = where
                     .startUnion().select(book).from(book).where(book.id.gt(b))
@@ -462,9 +459,9 @@ public class UnionTests extends AbstractCoreTest {
 
         @Test
         public void testOngoingSetOperationBuilderNestedEmptySetOperation() {
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
-            CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
+            CriteriaBuilder<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> union = where
                     .startUnion().select(book).from(book).where(book.id.gt(b))
@@ -561,7 +558,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d2 = new QDocument("d2");
             QDocument d3 = new QDocument("d3");
 
-            FinalSetOperationCriteriaBuilder<String> cb = new CriteriaBuilderImpl<String>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<String> cb = CriteriaBuilder.<String> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1.name)
                     .where(d1.name.eq("d1"))
@@ -591,7 +588,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d2 = new QDocument("d2");
             QDocument d3 = new QDocument("d3");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1)
                     .where(d1.name.eq("d1"))
@@ -614,9 +611,8 @@ public class UnionTests extends AbstractCoreTest {
         public void testUnionAllOrderBy() {
             QDocument d1 = new QDocument("d1");
             QDocument d2 = new QDocument("d2");
-            QDocument d3 = new QDocument("d3");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1)
                     .where(d1.name.eq("d1"))
@@ -643,7 +639,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d2 = new QDocument("d2");
             QDocument d3 = new QDocument("d3");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1)
                     .where(d1.name.eq("d1"))
@@ -652,9 +648,9 @@ public class UnionTests extends AbstractCoreTest {
                     .from(d2)
                     .select(d2)
                     .where(d2.name.ne("d2"))
-                    .orderBy(d2.name.asc()).limit(1L)
+                    .orderBy(d2.name.asc()).setMaxResults(1)
                     .endSet()
-                    .orderBy(Expressions.stringPath("name").desc()).limit(1L);
+                    .orderBy(Expressions.stringPath("name").desc()).setMaxResults(1);
 
             String expected = ""
                     + "SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
@@ -673,7 +669,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d2 = new QDocument("d2");
             QDocument d3 = new QDocument("d3");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1)
                     .where(d1.name.ne("d1"))
@@ -708,7 +704,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d5 = new QDocument("d5");
             QDocument d6 = new QDocument("d6");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .from(d1)
                     .select(d1)
                     .where(d1.name.eq("d1"))
@@ -762,7 +758,7 @@ public class UnionTests extends AbstractCoreTest {
             QDocument d5 = new QDocument("d5");
             QDocument d6 = new QDocument("d6");
 
-            FinalSetOperationCriteriaBuilder<Document> cb = new CriteriaBuilderImpl<Document>(new BlazeJPAQuery<>(em, cbf))
+            FinalSetOperationCriteriaBuilder<Document> cb = CriteriaBuilder.<Document> getCriteriaBuilder(em, cbf)
                     .startSet()
                     .startSet()
                     .startSet()
@@ -774,28 +770,28 @@ public class UnionTests extends AbstractCoreTest {
                     .select(d2)
                     .where(d2.name.eq("D2"))
                     .endSetWith()
-                    .limit(1)
+                    .setMaxResults(1)
                     .endSet()
                     .union()
                     .from(d3)
                     .select(d3)
                     .where(d3.name.eq("D3"))
                     .endSetWith()
-                    .limit(2)
+                    .setMaxResults(2)
                     .endSet()
                     .union()
                     .from(d4)
                     .select(d4)
                     .where(d4.name.eq("D4"))
                     .endSetWith()
-                    .limit(3)
+                    .setMaxResults(3)
                     .endSet()
                     .union()
                     .from(d5)
                     .select(d5)
                     .where(d5.name.eq("D5"))
                     .endSet()
-                    .limit(4);
+                    .setMaxResults(4);
             String expected = ""
                     + "(((SELECT d1 FROM Document d1 WHERE d1.name = :param_0\n"
                     + "INTERSECT\n"
@@ -819,7 +815,7 @@ public class UnionTests extends AbstractCoreTest {
             Param<Long> e = new Param<>(Long.class, "e");
             Param<Long> f = new Param<>(Long.class, "f");
 
-            CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(em, cbf));
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
 
             String queryString = criteriaBuilder.select(book).from(book).where(book.id.gt(a))
                     .startUnion()
@@ -855,11 +851,28 @@ public class UnionTests extends AbstractCoreTest {
         }
 
         @Test
+        public void test() {
+
+            CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.getCriteriaBuilder(em, cbf);
+
+            criteriaBuilder.with(book).from(book)
+                    .bind(book.id).select(book.id)
+                    .bind(book.name).select(book.name)
+                    .unionAll().from(book)
+                    .bind(book.id).select(book.id)
+                    .bind(book.name).select(book.name)
+                    .endSet()
+                    .end()
+                    .select(book).from(book);
+
+        }
+
+        @Test
         public void testFluent() {
             doInJPA(entityManager -> {
 
-                CriteriaBuilderImpl<Book> criteriaBuilder = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
-                CriteriaBuilderImpl<Book> criteriaBuilder2 = new CriteriaBuilderImpl<>(new BlazeJPAQuery<>(entityManager, cbf));
+                CriteriaBuilder<Book> criteriaBuilder = CriteriaBuilder.<Book> getCriteriaBuilder(entityManager, cbf);
+                CriteriaBuilder<Book> criteriaBuilder2 = CriteriaBuilder.<Book> getCriteriaBuilder(entityManager, cbf);
                 Param<Long> a = new Param<>(Long.class, "a");
                 Param<Long> b = new Param<>(Long.class, "b");
                 Param<Long> c = new Param<>(Long.class, "c");
@@ -952,7 +965,7 @@ public class UnionTests extends AbstractCoreTest {
                         .intersect()
                         .select(book).from(book).where(book.id.gt(g))
                         .endSetWith()
-                        .orderBy(Expressions.stringPath("name").asc()).limit(1)
+                        .orderBy(Expressions.stringPath("name").asc()).setMaxResults(1)
                         .endSet()
                         .startExcept()
                         .endSet()

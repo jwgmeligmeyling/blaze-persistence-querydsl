@@ -3,18 +3,20 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
 import com.pallasathenagroup.querydsl.SetExpression;
-import com.pallasathenagroup.querydsl.SetExpressionImpl;
 import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
+import com.pallasathenagroup.querydsl.api.FullSelectCTECriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
+import com.querydsl.core.types.EntityPath;
+import com.querydsl.core.types.Path;
 import com.querydsl.core.types.SubQueryExpression;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, CriteriaBuilderImpl<T>> implements CriteriaBuilder<T, CriteriaBuilderImpl<T>> {
+public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, CriteriaBuilder<T>> implements CriteriaBuilder<T> {
 
     public CriteriaBuilderImpl(BlazeJPAQuery<T> blazeJPAQuery) {
         super(blazeJPAQuery);
@@ -105,4 +107,21 @@ public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, Criteria
             };
         }, true);
     }
+
+    @Override
+    public <U> FullSelectCTECriteriaBuilder<CriteriaBuilder<T>, U> with(EntityPath<U> entityPath) {
+        return new FullSelectCTECriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), subQueryExpression -> {
+            blazeJPAQuery.with((Path) entityPath, subQueryExpression);
+            return CriteriaBuilderImpl.this;
+        });
+    }
+
+    @Override
+    public <U> FullSelectCTECriteriaBuilder<CriteriaBuilder<T>, U> withRecursive(EntityPath<U> entityPath) {
+        return new FullSelectCTECriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), subQueryExpression -> {
+            blazeJPAQuery.withRecursive((Path) entityPath, subQueryExpression);
+            return CriteriaBuilderImpl.this;
+        });
+    }
+
 }

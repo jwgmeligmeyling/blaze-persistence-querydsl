@@ -1,4 +1,4 @@
-package com.pallasathenagroup.querydsl.impl;
+package com.pallasathenagroup.querydsl;
 
 import com.querydsl.core.QueryFlag;
 import com.querydsl.core.types.Operation;

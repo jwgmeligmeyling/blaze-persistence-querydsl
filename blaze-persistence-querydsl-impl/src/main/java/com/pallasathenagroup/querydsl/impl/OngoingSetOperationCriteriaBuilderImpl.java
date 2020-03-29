@@ -3,9 +3,9 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.NotEmptySetVisitor;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
-import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingSetOperationCriteriaBuilder;
@@ -145,7 +145,10 @@ public class OngoingSetOperationCriteriaBuilderImpl<X, Y, T> extends
 
     @Override
     public StartOngoingSetOperationCriteriaBuilder<X, MiddleOngoingSetOperationCriteriaBuilder<X, Y, T>, T> startUnion() {
-        return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ?  JPQLNextOps.LEFT_NESTED_SET_UNION : JPQLNextOps.SET_UNION, this::endWith, false);
+        return new StartOngoingSetOperationCriteriaBuilderImpl<>(
+                blazeJPAQuery.createSubQuery(),
+                leftNested ?  JPQLNextOps.LEFT_NESTED_SET_UNION : JPQLNextOps.SET_UNION,
+                this::endWith, false);
     }
 
 

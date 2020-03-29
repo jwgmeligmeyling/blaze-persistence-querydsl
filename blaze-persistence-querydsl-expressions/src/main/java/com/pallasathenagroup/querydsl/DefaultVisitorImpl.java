@@ -1,4 +1,4 @@
-package com.pallasathenagroup.querydsl.impl;
+package com.pallasathenagroup.querydsl;
 
 import com.querydsl.core.types.Constant;
 import com.querydsl.core.types.FactoryExpression;
@@ -9,7 +9,7 @@ import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.TemplateExpression;
 import com.querydsl.core.types.Visitor;
 
-public class DefaultVisitorImpl<R, C> implements Visitor<R, C> {
+abstract class DefaultVisitorImpl<R, C> implements Visitor<R, C> {
     @Override
     public R visit(Constant<?> constant, C c) {
         return null;

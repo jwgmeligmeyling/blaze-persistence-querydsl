@@ -12,7 +12,6 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
 import com.pallasathenagroup.querydsl.CTEUtils.Binds;
-import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.SubQueryExpression;
@@ -90,9 +89,9 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(1));
 
-            BlazeCriteriaVisitor<Tuple> blazeCriteriaVisitor = new BlazeCriteriaVisitor<>(cbf, entityManager, JPQLTemplates.DEFAULT);
-            blazeCriteriaVisitor.serialize(query.getMetadata(), false, null);
-            CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
+            BlazeCriteriaBuilderRenderer<Tuple> blazeCriteriaBuilderRenderer = new BlazeCriteriaBuilderRenderer<>(cbf, entityManager, JPQLTemplates.DEFAULT);
+            blazeCriteriaBuilderRenderer.render(query);
+            CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaBuilderRenderer.getCriteriaBuilder();
             List<Tuple> fetch = criteriaBuilder.getResultList();
             assertFalse(fetch.isEmpty());
         });

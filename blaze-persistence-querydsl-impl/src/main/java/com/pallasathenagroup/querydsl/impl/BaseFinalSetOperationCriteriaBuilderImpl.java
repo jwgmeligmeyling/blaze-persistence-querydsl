@@ -1,8 +1,9 @@
 package com.pallasathenagroup.querydsl.impl;
 
+import com.blazebit.persistence.LimitBuilder;
 import com.pallasathenagroup.querydsl.SetExpression;
-import com.pallasathenagroup.querydsl.api.BaseFinalSetOperationBuilder;
 import com.pallasathenagroup.querydsl.api.BaseOngoingFinalSetOperationBuilder;
+import com.pallasathenagroup.querydsl.api.OrderByBuilder;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.types.OrderSpecifier;
@@ -13,7 +14,7 @@ import javax.annotation.Nullable;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-public abstract class BaseFinalSetOperationCriteriaBuilderImpl<X, Y extends BaseFinalSetOperationBuilder<X, Y>, T>
+public abstract class BaseFinalSetOperationCriteriaBuilderImpl<X, Y extends LimitBuilder<Y> & OrderByBuilder<Y>, T>
         extends BaseFinalSetOperationBuilderImpl<X, Y, T>
         implements BaseOngoingFinalSetOperationBuilder<X, Y> {
 
@@ -24,26 +25,33 @@ public abstract class BaseFinalSetOperationCriteriaBuilderImpl<X, Y extends Base
         this.blazeJPAQuery = blazeJPAQuery;
     }
 
-    public Y limit(long l) {
-        blazeJPAQuery.limit(l);
+    @Override
+    public Y setFirstResult(int i) {
+        blazeJPAQuery.offset(i);
         return self;
     }
 
-    public Y offset(long l) {
-        blazeJPAQuery.offset(l);
+    @Override
+    public Y setMaxResults(int i) {
+        blazeJPAQuery.limit(i);
         return self;
     }
 
-    public Y restrict(QueryModifiers queryModifiers) {
-//        blazeJPAQuery.restrict(queryModifiers);
-        return self;
+    @Override
+    public int getFirstResult() {
+        return blazeJPAQuery.getMetadata().getModifiers().getOffsetAsInteger();
     }
 
+    @Override
+    public int getMaxResults() {
+        return blazeJPAQuery.getMetadata().getModifiers().getLimitAsInteger();
+    }
+
+    @Override
     public Y orderBy(OrderSpecifier<?>... orderSpecifiers) {
         blazeJPAQuery.orderBy(orderSpecifiers);
         return self;
     }
-
 
     public <U> Y set(ParamExpression<U> paramExpression, U u) {
 //        blazeJPAQuery.set(paramExpression, u);

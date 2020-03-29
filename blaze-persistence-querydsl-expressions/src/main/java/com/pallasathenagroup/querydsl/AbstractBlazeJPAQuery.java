@@ -6,7 +6,6 @@ import com.blazebit.persistence.FullQueryBuilder;
 import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
 import com.blazebit.persistence.Queryable;
-import com.pallasathenagroup.querydsl.impl.BlazeCriteriaVisitor;
 import com.querydsl.core.DefaultQueryMetadata;
 import com.querydsl.core.JoinFlag;
 import com.querydsl.core.NonUniqueResultException;
@@ -22,6 +21,7 @@ import com.querydsl.core.types.MapExpression;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
 
@@ -55,8 +55,8 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    protected BlazeCriteriaVisitor<T> createSerializer() {
-        return new BlazeCriteriaVisitor<T>(criteriaBuilderFactory, entityManager, getTemplates());
+    protected JPQLNextSerializer createSerializer() {
+        return new JPQLNextSerializer(getTemplates(), entityManager);
     }
 
     public AbstractBlazeJPAQuery(EntityManager em, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
@@ -167,25 +167,17 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
                 .getResultList();
     }
 
-    @Override
-    protected BlazeCriteriaVisitor<T> serialize(boolean forCountRow, boolean validate) {
-        if (validate) {
-            if (queryMixin.getMetadata().getJoins().isEmpty()) {
-                throw new IllegalArgumentException("No sources given");
-            }
-        }
-        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = createSerializer();
-        blazeCriteriaVisitor.serialize(this);
-        return blazeCriteriaVisitor;
-    }
-
     public String getQueryString() {
-        return getQueryable(null).getQueryString();
+        System.out.println("Query string for: " + toString());
+        String queryString = getQueryable(null).getQueryString();
+        System.out.println("Is: " + queryString);
+        return queryString;
     }
 
     protected Queryable<T, ?> getQueryable(@Nullable QueryModifiers modifiers) {
-        BlazeCriteriaVisitor<T> blazeCriteriaVisitor = serialize(false, false);
-        CriteriaBuilder<T> criteriaBuilder = blazeCriteriaVisitor.getCriteriaBuilder();
+        BlazeCriteriaBuilderRenderer<T> blazeCriteriaBuilderRenderer = new BlazeCriteriaBuilderRenderer<T>(criteriaBuilderFactory, entityManager, getTemplates());
+        Queryable<T, ?> queryable = blazeCriteriaBuilderRenderer.render(this);
+        CriteriaBuilder<T> criteriaBuilder = blazeCriteriaBuilderRenderer.getCriteriaBuilder();
 
         if (modifiers != null) {
             if (modifiers.getLimitAsInteger() != null) {
@@ -206,7 +198,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             criteriaBuilder.setCacheable(true);
         }
 
-        return blazeCriteriaVisitor.getQueryable();
+        return queryable;
     }
 
     @Override
@@ -377,8 +369,8 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    public String toString() {
-        return getQueryable(null).getQueryString();
+    protected JPQLSerializer serialize(boolean forCountRow) {
+        return super.serialize(forCountRow);
     }
 
     // Union stuff

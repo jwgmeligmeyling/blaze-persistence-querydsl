@@ -3,9 +3,9 @@ package com.pallasathenagroup.querydsl.impl;
 
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.NotEmptySetVisitor;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
-import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingSetOperationCriteriaBuilder;

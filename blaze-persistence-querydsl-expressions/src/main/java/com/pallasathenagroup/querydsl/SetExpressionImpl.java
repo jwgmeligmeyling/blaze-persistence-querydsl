@@ -101,12 +101,6 @@ public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> impleme
 
     @Override
     public String toString() {
-        try {
-            return query.toString();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
+        return query.toString();
     }
 }

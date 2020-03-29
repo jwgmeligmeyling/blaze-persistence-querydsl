@@ -1,8 +1,11 @@
 package com.pallasathenagroup.querydsl.impl;
 
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
+import com.pallasathenagroup.querydsl.NamedWindow;
+import com.pallasathenagroup.querydsl.api.PaginatedCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.QueryBuilder;
 import com.querydsl.core.QueryModifiers;
+import com.querydsl.core.ResultTransformer;
 import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
@@ -11,9 +14,11 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.QTuple;
 import com.querydsl.core.types.SubQueryExpression;
 
 import javax.persistence.TypedQuery;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -41,19 +46,28 @@ public class AbstractQueryBuilder<T, Q extends QueryBuilder<T, Q>> extends Abstr
         return self;
     }
 
-    public Q limit(long l) {
-        blazeJPAQuery.limit(l);
+    public Q setFirstResult(int i) {
+        blazeJPAQuery.offset(i);
         return self;
     }
 
-    public Q offset(long l) {
-        blazeJPAQuery.offset(l);
+    public Q setMaxResults(int i) {
+        blazeJPAQuery.limit(i);
         return self;
     }
 
-    public Q restrict(QueryModifiers queryModifiers) {
-        blazeJPAQuery.restrict(queryModifiers);
+    @Override
+    public Q window(NamedWindow window) {
+        blazeJPAQuery.window(window);
         return self;
+    }
+
+    public int getFirstResult() {
+        return blazeJPAQuery.getMetadata().getModifiers().getOffsetAsInteger();
+    }
+
+    public int getMaxResults() {
+        return blazeJPAQuery.getMetadata().getModifiers().getLimitAsInteger();
     }
     
     @Override
@@ -69,7 +83,19 @@ public class AbstractQueryBuilder<T, Q extends QueryBuilder<T, Q>> extends Abstr
 
     @Override
     public <X> Q fromIdentifiableValues(EntityPath<X> path, Collection<X> elements) {
-        blazeJPAQuery.fromValues(path, elements);
+        blazeJPAQuery.fromIdentifiableValues(path, elements);
+        return self;
+    }
+
+    @Override
+    public <X> Q fromValues(Path<X> path, Path<X> alias, Collection<X> elements) {
+        blazeJPAQuery.fromValues(path, alias, elements);
+        return self;
+    }
+
+    @Override
+    public <X> Q fromIdentifiableValues(Path<X> path, Path<X> alias, Collection<X> elements) {
+        blazeJPAQuery.fromIdentifiableValues(path, alias, elements);
         return self;
     }
 
@@ -307,13 +333,11 @@ public class AbstractQueryBuilder<T, Q extends QueryBuilder<T, Q>> extends Abstr
         return self;
     }
 
-    @Override
     public Q fetchJoin() {
         blazeJPAQuery.fetchJoin();
         return self;
     }
 
-    @Override
     public Q fetchAll() {
         blazeJPAQuery.fetchAll();
         return self;
@@ -352,8 +376,20 @@ public class AbstractQueryBuilder<T, Q extends QueryBuilder<T, Q>> extends Abstr
     }
 
     @Override
-    public <U> Q select(Expression<T> expression) {
-        blazeJPAQuery.select(expression);
+    public Q select(Expression<?> expression) {
+        Expression<?> projection = blazeJPAQuery.getMetadata().getProjection();
+        if (projection != null) {
+            List<Expression<?>> expressions = new ArrayList<>();
+            if (projection instanceof QTuple) {
+                expressions.addAll(((QTuple) projection).getArgs());
+            } else {
+                expressions.add(projection);
+            }
+            expressions.add(expression);
+            blazeJPAQuery.select(expressions.toArray(new Expression[0]));
+        } else {
+            blazeJPAQuery.select(expression);
+        }
         return self;
     }
 
@@ -361,5 +397,13 @@ public class AbstractQueryBuilder<T, Q extends QueryBuilder<T, Q>> extends Abstr
     public Q where(Predicate... predicates) {
         blazeJPAQuery.where(predicates);
         return self;
+    }
+
+    public <S> S transform(ResultTransformer<S> transformer) {
+        return blazeJPAQuery.transform(transformer);
+    }
+
+    public PaginatedCriteriaBuilder<T> page(int firstResult, int maxResults) {
+        return new PaginatedCriteriaBuilderImpl<>(blazeJPAQuery, firstResult, maxResults);
     }
 }

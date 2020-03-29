@@ -1,4 +1,4 @@
-package com.pallasathenagroup.querydsl.impl;
+package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.BaseOngoingFinalSetOperationBuilder;
 import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
@@ -17,12 +17,9 @@ import com.blazebit.persistence.GroupByBuilder;
 import com.blazebit.persistence.HavingBuilder;
 import com.blazebit.persistence.JoinOnBuilder;
 import com.blazebit.persistence.JoinType;
-import com.blazebit.persistence.LeafOngoingFinalSetOperationCriteriaBuilder;
-import com.blazebit.persistence.LeafOngoingSetOperationCriteriaBuilder;
 import com.blazebit.persistence.LimitBuilder;
 import com.blazebit.persistence.MultipleSubqueryInitiator;
 import com.blazebit.persistence.ObjectBuilder;
-import com.blazebit.persistence.OngoingFinalSetOperationCriteriaBuilder;
 import com.blazebit.persistence.OngoingSetOperationBuilder;
 import com.blazebit.persistence.OrderByBuilder;
 import com.blazebit.persistence.ParameterHolder;
@@ -41,17 +38,10 @@ import com.blazebit.persistence.WindowFrameBetweenBuilder;
 import com.blazebit.persistence.WindowFrameBuilder;
 import com.blazebit.persistence.WindowFrameExclusionBuilder;
 import com.blazebit.persistence.parser.EntityMetamodel;
-import com.blazebit.persistence.parser.expression.SubqueryExpression;
 import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
 import com.blazebit.persistence.spi.ExtendedAttribute;
 import com.blazebit.persistence.spi.ExtendedManagedType;
-import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
-import com.pallasathenagroup.querydsl.JPQLNextOps;
-import com.pallasathenagroup.querydsl.NamedWindow;
-import com.pallasathenagroup.querydsl.SetExpressionImpl;
-import com.pallasathenagroup.querydsl.SetOperationFlag;
-import com.pallasathenagroup.querydsl.ValuesExpression;
 import com.querydsl.core.JoinExpression;
 import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryFlag.Position;
@@ -73,10 +63,8 @@ import com.querydsl.core.types.Visitor;
 import com.querydsl.core.types.dsl.BeanPath;
 import com.querydsl.core.types.dsl.CollectionExpressionBase;
 import com.querydsl.jpa.JPAQueryMixin;
-import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -94,59 +82,29 @@ import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
-public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
+public class BlazeCriteriaBuilderRenderer<T> {
 
-    private static final Logger logger = Logger.getLogger(BlazeCriteriaVisitor.class.getName());
+    private static final Logger logger = Logger.getLogger(BlazeCriteriaBuilderRenderer.class.getName());
 
-    private CriteriaBuilder<T> criteriaBuilder;
-    private Queryable<T, ?> queryable;
-    private CriteriaBuilderFactory criteriaBuilderFactory;
-    private EntityManager entityManager;
-    private Map<Object, String> constantToLabel = new IdentityHashMap<>();
+    private final CriteriaBuilderFactory criteriaBuilderFactory;
+    private final EntityManager entityManager;
+    private final JPQLNextSerializer serializer;
+    private final Map<Object, String> constantToLabel = new IdentityHashMap<>();
     private Map<Expression<?>, String> subQueryToLabel = new IdentityHashMap<>();
-    private JPQLTemplates templates;
+    private CriteriaBuilder<T> criteriaBuilder;
 
-    public BlazeCriteriaVisitor(CriteriaBuilderFactory criteriaBuilderFactory, EntityManager entityManager, JPQLTemplates templates) {
-        super(templates);
+    public BlazeCriteriaBuilderRenderer(CriteriaBuilderFactory criteriaBuilderFactory, EntityManager entityManager, JPQLTemplates templates) {
+        this.serializer = new JPQLNextExpressionSerializer(templates, entityManager);
         this.criteriaBuilderFactory = criteriaBuilderFactory;
         this.entityManager = entityManager;
-        this.templates = templates;
     }
 
-    @Override
-    public void serialize(QueryMetadata metadata, boolean forCountRow, @Nullable String projection) {
-        QueryModifiers modifiers = metadata.getModifiers();
-        Expression<?> select = metadata.getProjection();
-        Class<T> type = (Class<T>) select.getType();
-        this.criteriaBuilder = criteriaBuilderFactory.create(entityManager, type);
-
-
-        renderCTEs(metadata);
-        renderJoins(metadata, criteriaBuilder);
-        renderDistinct(metadata, criteriaBuilder);
-        renderWhere(metadata, criteriaBuilder);
-        renderGroupBy(metadata, criteriaBuilder);
-        renderHaving(metadata, criteriaBuilder);
-        renderOrderBy(metadata, criteriaBuilder);
-        renderParameters(metadata, criteriaBuilder);
-        renderConstants(criteriaBuilder);
-        renderModifiers(modifiers, criteriaBuilder);
-
-        if (select instanceof FactoryExpression<?>) {
-            FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
-            criteriaBuilder.selectNew(new FactoryExpressionObjectBuilder(factoryExpression));
-        } else {
-            renderSingleSelect(select, criteriaBuilder);
-        }
-
-    }
-
-    public void serialize(Expression<?> expression) {
+    public Queryable<T, ?> render(Expression<?> expression) {
         this.criteriaBuilder = (CriteriaBuilder) criteriaBuilderFactory.create(entityManager, Object.class);
-        this.queryable = (Queryable<T, ?>) serializeSubQuery(this.criteriaBuilder, expression);
+        return (Queryable<T, ?>) serializeSubQuery(this.criteriaBuilder, expression);
     }
 
-    public Object serializeSubQuery(Object criteriaBuilder, Expression<?> expression) {
+    private Object serializeSubQuery(Object criteriaBuilder, Expression<?> expression) {
         Object result = expression.accept(new Visitor<Object, Object>() {
 
             @Override
@@ -159,12 +117,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 throw new UnsupportedOperationException();
             }
 
-            private SubQueryExpression<?> setSubQuery;
-
             @Override
             public Object visit(Operation<?> setOperation, Object criteriaBuilder) {
                 Expression<?> lhs = setOperation.getArg(0);
-                SubQueryExpression<?> lhsSubquery = lhs.accept(GetSubqueryVisitor.INSTANCE, null);
+                SubQueryExpression<?> lhsSubquery = lhs.accept(GetSubQueryVisitor.INSTANCE, null);
                 SetOperationFlag setOperationFlag = lhsSubquery != null ? getSetOperationFlag(lhsSubquery.getMetadata()) : null;
                 boolean lhsNestedSet = setOperationFlag != null && LEFT_NESTED_SET_OPERATIONS.contains(setOperation.getOperator());
 
@@ -191,7 +147,7 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                 }
 
                 Expression<?> rhs = setOperation.getArg(1);
-                SubQueryExpression<?> rhsSubquery = rhs.accept(GetSubqueryVisitor.INSTANCE, null);
+                SubQueryExpression<?> rhsSubquery = rhs.accept(GetSubQueryVisitor.INSTANCE, null);
                 setOperationFlag = rhsSubquery != null ? getSetOperationFlag(rhsSubquery.getMetadata()) : null;
                 boolean isNestedSet = setOperationFlag != null;
                 SetOperationBuilder<?,?> setOperationBuilder = (SetOperationBuilder<?,?>) criteriaBuilder;
@@ -264,7 +220,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
                 Optional<QueryFlag> setOperation = subQueryMetadata.getFlags().stream().filter(flag -> flag.getPosition().equals(Position.START_OVERRIDE)).findAny();
                 if (setOperation.isPresent()) {
-                    this.setSubQuery = subQuery;
                     return setOperation.get().getFlag().accept(this, criteriaBuilder);
                 }
 
@@ -335,9 +290,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
                                 }
                             }
                         }
-
-                        // TODO
-//                        cteAliases = null;
                     } else {
                         for (Expression<?> selection : projection) {
                             renderSingleSelect(selection, (SelectBuilder<?>) criteriaBuilder);
@@ -377,11 +329,10 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
             Position position = queryFlag.getPosition();
             switch (position) {
                 case WITH:
-                    flag.accept(BlazeCriteriaVisitor.this, null);
+                    flag.accept(serializer, null);
                     break;
                 case AFTER_HAVING:
                     renderWindowFlag(queryFlag);
-
                     break;
             }
         }
@@ -731,46 +682,12 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     private int length = 0;
 
-    private String takeBuffer() {
-        if (getLength() == length) {
-            return "";
-        }
-        String result = toString().substring(length);
-        length = getLength();
-        return result;
-    }
-
     private String renderExpression(Expression<?> select) {
-        takeBuffer();
-        select.accept(this, null);
-        return takeBuffer();
+        serializer.clearBuffer();
+        select.accept(serializer, null);
+        return serializer.takeBuffer();
     }
 
-    @Override
-    public void visitConstant(Object constant) {
-        // TODO Handle in case operations
-        boolean wrap = templates.wrapConstant(constant);
-        if (wrap) append("(");
-        append(":");
-        append(constantToLabel.computeIfAbsent(constant, o -> "param_" + constantToLabel.size()));
-        if (wrap) append(")");
-    }
-
-    @Override
-    public Void visit(ParamExpression<?> param, Void context) {
-        append(":").append(param.getName());
-        return null;
-    }
-
-    @Override
-    public Void visit(SubQueryExpression<?> query, Void context) {
-        renderSubQueryExpression(query);
-        return null;
-    }
-
-    private void renderSubQueryExpression(Expression<?> query) {
-        append(subQueryToLabel.computeIfAbsent(query, o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
-    }
 
     private final List<SubqueryInitiator<?>> subqueryInitiatorStack = new ArrayList<SubqueryInitiator<?>>();;
 
@@ -823,78 +740,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         }
     }
 
-    @Override
-    protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
-        if (operator instanceof JPQLNextOps) {
-            switch ((JPQLNextOps) operator) {
-                case WITH_ALIAS:
-                    Expression<?> withColumns = args.get(0);
-                    withColumns.accept(this, null);
-
-                    if (recursive) {
-                        Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
-                        if (unionOperation == null) {
-                            SubQueryExpression<?> setSubquery = args.get(1).accept(GetSubqueryVisitor.INSTANCE, null);
-                            QueryFlag setFlag = getSetOperationFlag(setSubquery.getMetadata());
-                            unionOperation = setFlag.getFlag().accept(GetOperationVisitor.INSTANCE, null);
-                        }
-
-                        SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
-                        SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
-                                (SelectRecursiveCTECriteriaBuilder<?>)
-                                        serializeSubQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
-                        SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
-                                baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
-                        subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
-                        ((SelectCTECriteriaBuilder<?>) serializeSubQuery(recursiveCriteriaBuilder, subQuery)).end();
-                    } else {
-                        FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(type);
-
-                        Expression<?> subQueryExpression = args.get(1);
-                        Object result = serializeSubQuery(cteBuilder, subQueryExpression);
-
-                        if (result instanceof FinalSetOperationCTECriteriaBuilder) {
-                            ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
-                        } else if (result instanceof FullSelectCTECriteriaBuilder) {
-                            ((FullSelectCTECriteriaBuilder<?>) result).end();
-                        }
-                    }
-                    return;
-                case WITH_RECURSIVE_COLUMNS:
-                case WITH_COLUMNS:
-                    recursive = operator == WITH_RECURSIVE_COLUMNS;
-                    cteEntityPath = (EntityPath<?>) args.get(0);
-                    cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
-                    return;
-            }
-        }
-
-        super.visitOperation(type, operator, args);
-    }
-
-    @Override
-    public Void visit(Operation<?> expr, Void context) {
-        if (expr.getOperator() instanceof JPQLNextOps) {
-            switch ((JPQLNextOps) expr.getOperator()) {
-                case SET_UNION:
-                case SET_UNION_ALL:
-                case SET_INTERSECT:
-                case SET_INTERSECT_ALL:
-                case SET_EXCEPT:
-                case SET_EXCEPT_ALL:
-                case LEFT_NESTED_SET_UNION:
-                case LEFT_NESTED_SET_UNION_ALL:
-                case LEFT_NESTED_SET_INTERSECT:
-                case LEFT_NESTED_SET_INTERSECT_ALL:
-                case LEFT_NESTED_SET_EXCEPT:
-                case LEFT_NESTED_SET_EXCEPT_ALL:
-                    renderSubQueryExpression(expr);
-                    return null;
-            }
-        }
-
-        return super.visit(expr, context);
-    }
 
     private static String relativePathString(Path<?> root, Path<?> path) {
         StringBuilder pathString = new StringBuilder(path.getMetadata().getName().length());
@@ -937,10 +782,6 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
 
     public CriteriaBuilder<T> getCriteriaBuilder() {
         return criteriaBuilder;
-    }
-
-    public Queryable<T, ?> getQueryable() {
-        return queryable;
     }
 
     private static class JoinTargetAliasPathResolver extends DefaultVisitorImpl<Path<?>, Void> {
@@ -1011,5 +852,136 @@ public class BlazeCriteriaVisitor<T> extends JPQLSerializer {
         public List<T> buildList(List<T> list) {
             return list;
         }
+    }
+
+    private static class GetOperationVisitor extends DefaultVisitorImpl<Operation<?>, Void> {
+
+        public static final GetOperationVisitor INSTANCE = new GetOperationVisitor();
+
+        @Override
+        public Operation<?> visit(Operation<?> operation, Void aVoid) {
+            return operation;
+        }
+
+    }
+
+    private static class GetSubQueryVisitor extends DefaultVisitorImpl<SubQueryExpression<?>, Void> {
+
+        public static final GetSubQueryVisitor INSTANCE = new GetSubQueryVisitor();
+
+        @Override
+        public SubQueryExpression<?> visit(SubQueryExpression<?> subQueryExpression, Void aVoid) {
+            return subQueryExpression;
+        }
+    }
+
+    private class JPQLNextExpressionSerializer extends JPQLNextSerializer {
+
+        private final JPQLTemplates templates;
+
+        public JPQLNextExpressionSerializer(JPQLTemplates templates, EntityManager entityManager) {
+            super(templates, entityManager);
+            this.templates = templates;
+        }
+
+        @Override
+        public void visitConstant(Object constant) {
+            // TODO Handle in case operations
+            boolean wrap = templates.wrapConstant(constant);
+            if (wrap) append("(");
+            append(":");
+            append(constantToLabel.computeIfAbsent(constant, o -> "param_" + constantToLabel.size()));
+            if (wrap) append(")");
+        }
+
+        @Override
+        public Void visit(ParamExpression<?> param, Void context) {
+            append(":").append(param.getName());
+            return null;
+        }
+
+        @Override
+        public Void visit(SubQueryExpression<?> query, Void context) {
+            renderSubQueryExpression(query);
+            return null;
+        }
+
+        private void renderSubQueryExpression(Expression<?> query) {
+            serializer.append(subQueryToLabel.computeIfAbsent(query, o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
+        }
+
+        @Override
+        protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
+            if (operator instanceof JPQLNextOps) {
+                switch ((JPQLNextOps) operator) {
+                    case WITH_ALIAS:
+                        Expression<?> withColumns = args.get(0);
+                        withColumns.accept(this, null);
+
+                        if (recursive) {
+                            Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
+                            if (unionOperation == null) {
+                                SubQueryExpression<?> setSubquery = args.get(1).accept(GetSubQueryVisitor.INSTANCE, null);
+                                QueryFlag setFlag = getSetOperationFlag(setSubquery.getMetadata());
+                                unionOperation = setFlag.getFlag().accept(GetOperationVisitor.INSTANCE, null);
+                            }
+
+                            SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
+                            SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
+                                    (SelectRecursiveCTECriteriaBuilder<?>)
+                                            serializeSubQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
+                            SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
+                                    baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
+                            subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
+                            ((SelectCTECriteriaBuilder<?>) serializeSubQuery(recursiveCriteriaBuilder, subQuery)).end();
+                        } else {
+                            FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(type);
+
+                            Expression<?> subQueryExpression = args.get(1);
+                            Object result = serializeSubQuery(cteBuilder, subQueryExpression);
+
+                            if (result instanceof FinalSetOperationCTECriteriaBuilder) {
+                                ((FinalSetOperationCTECriteriaBuilder<?>) result).end();
+                            } else if (result instanceof FullSelectCTECriteriaBuilder) {
+                                ((FullSelectCTECriteriaBuilder<?>) result).end();
+                            }
+                        }
+                        return;
+                    case WITH_RECURSIVE_COLUMNS:
+                    case WITH_COLUMNS:
+                        recursive = operator == WITH_RECURSIVE_COLUMNS;
+                        cteEntityPath = (EntityPath<?>) args.get(0);
+                        cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
+                        return;
+                }
+            }
+
+            super.visitOperation(type, operator, args);
+        }
+
+        @Override
+        public Void visit(Operation<?> expr, Void context) {
+            if (expr.getOperator() instanceof JPQLNextOps) {
+                switch ((JPQLNextOps) expr.getOperator()) {
+                    case SET_UNION:
+                    case SET_UNION_ALL:
+                    case SET_INTERSECT:
+                    case SET_INTERSECT_ALL:
+                    case SET_EXCEPT:
+                    case SET_EXCEPT_ALL:
+                    case LEFT_NESTED_SET_UNION:
+                    case LEFT_NESTED_SET_UNION_ALL:
+                    case LEFT_NESTED_SET_INTERSECT:
+                    case LEFT_NESTED_SET_INTERSECT_ALL:
+                    case LEFT_NESTED_SET_EXCEPT:
+                    case LEFT_NESTED_SET_EXCEPT_ALL:
+                        renderSubQueryExpression(expr);
+                        return null;
+                }
+            }
+
+            return super.visit(expr, context);
+        }
+
     }
 }

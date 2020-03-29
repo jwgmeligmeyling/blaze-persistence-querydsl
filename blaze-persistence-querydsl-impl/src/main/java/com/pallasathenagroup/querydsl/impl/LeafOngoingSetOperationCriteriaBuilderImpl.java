@@ -3,19 +3,18 @@ package com.pallasathenagroup.querydsl.impl;
 import com.pallasathenagroup.querydsl.AbstractBlazeJPAQuery;
 import com.pallasathenagroup.querydsl.BlazeJPAQuery;
 import com.pallasathenagroup.querydsl.JPQLNextOps;
+import com.pallasathenagroup.querydsl.NotEmptySetVisitor;
 import com.pallasathenagroup.querydsl.SetExpression;
 import com.pallasathenagroup.querydsl.SetExpressionImpl;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.LeafOngoingSetOperationCriteriaBuilder;
-import com.pallasathenagroup.querydsl.api.MiddleOngoingSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.OngoingFinalSetOperationCriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.StartOngoingSetOperationCriteriaBuilder;
 import com.querydsl.core.types.SubQueryExpression;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.function.BiFunction;
 
 public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         extends AbstractCriteriaBuilder<T, LeafOngoingSetOperationCriteriaBuilder<T>>
@@ -151,4 +150,5 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
     public StartOngoingSetOperationCriteriaBuilder<T, LeafOngoingFinalSetOperationCriteriaBuilder<T>, T> startExceptAll() {
         return new StartOngoingSetOperationCriteriaBuilderImpl<>(blazeJPAQuery.createSubQuery(), leftNested ? JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL : JPQLNextOps.SET_EXCEPT_ALL, this::endWith, false);
     }
+
 }

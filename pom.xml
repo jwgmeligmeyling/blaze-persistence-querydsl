@@ -27,6 +27,7 @@
         <module>blaze-persistence-querydsl-api</module>
         <module>blaze-persistence-querydsl-impl</module>
         <module>blaze-persistence-querydsl-testsuite</module>
+        <module>blaze-persistence-querydsl-expressions</module>
     </modules>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>

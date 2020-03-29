@@ -1,5 +1,17 @@
 package com.pallasathenagroup.querydsl.api;
 
+import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
+import com.blazebit.persistence.StartOngoingSetOperationBuilder;
+
+/**
+ * A base interface for builders that support set operators.
+ *
+ * @param <X> The concrete builder type
+ * @param <Y> The set sub-operation result type
+ * @param <Z> The set nesting start type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public interface OngoingSetOperationBuilder<X, Y, Z extends StartOngoingSetOperationBuilder<?, ?, ?>> extends BaseOngoingSetOperationBuilder<X, Y, Z> {
 
     /**

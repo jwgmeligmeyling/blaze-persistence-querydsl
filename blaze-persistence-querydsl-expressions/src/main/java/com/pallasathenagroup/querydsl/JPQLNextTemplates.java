@@ -1,5 +1,6 @@
 package com.pallasathenagroup.querydsl;
 
+import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
 import com.querydsl.jpa.DefaultQueryHandler;
 import com.querydsl.jpa.JPQLTemplates;
@@ -125,4 +126,5 @@ public class JPQLNextTemplates extends JPQLTemplates {
 
         add(JPQLNextOps.BIND, "{0}");
     }
+
 }
