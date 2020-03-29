@@ -74,8 +74,8 @@ public class JPQLNextTemplates extends JPQLTemplates {
 
         add(JPQLNextOps.SET_UNION, "{0} UNION {1}", Precedence.OR + 1);
         add(JPQLNextOps.SET_UNION_ALL, "{0} UNION ALL {1}", Precedence.OR + 1);
-        add(JPQLNextOps.SET_INTERSECT, "{0} INTERSECT {1}", Precedence.OR + 1);
-        add(JPQLNextOps.SET_INTERSECT_ALL, "{0} INTERSECT ALL {1}", Precedence.OR + 1);
+        add(JPQLNextOps.SET_INTERSECT, "{0} INTERSECT {1}", Precedence.OR + 2);
+        add(JPQLNextOps.SET_INTERSECT_ALL, "{0} INTERSECT ALL {1}", Precedence.OR + 2);
         add(JPQLNextOps.SET_EXCEPT, "{0} EXCEPT {1}", Precedence.OR + 1);
         add(JPQLNextOps.SET_EXCEPT_ALL, "{0} EXCEPT ALL {1}", Precedence.OR + 1);
 
