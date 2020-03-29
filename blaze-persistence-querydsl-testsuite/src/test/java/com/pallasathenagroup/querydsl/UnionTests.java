@@ -135,7 +135,7 @@ public class UnionTests extends AbstractCoreTest {
             CriteriaBuilderImpl<Book> where = criteriaBuilder.select(book).from(book).where(book.id.gt(a));
 
             String queryString = criteriaBuilderSetFunction.apply(where).endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a");
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a", queryString);
 
         }
 
@@ -149,9 +149,9 @@ public class UnionTests extends AbstractCoreTest {
                     criteriaBuilderSetFunction.apply(where).select(book).from(book).where(book.id.gt(b));
 
             String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     setOperation + "\n" +
-                    "SELECT book FROM Book book WHERE book.id > :b");
+                    "SELECT book FROM Book book WHERE book.id > :b", queryString);
         }
 
         @Test
@@ -167,11 +167,11 @@ public class UnionTests extends AbstractCoreTest {
                     .select(book).from(book).where(book.id.gt(c));
 
             String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     setOperation + "\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     setOperation + "\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c");
+                    "SELECT book FROM Book book WHERE book.id > :c", queryString);
 
         }
 
@@ -187,9 +187,9 @@ public class UnionTests extends AbstractCoreTest {
             leafOngoingSetOperationCriteriaBuilder = leafOngoingSetFunction.apply(leafOngoingSetOperationCriteriaBuilder);
 
             String queryString = leafOngoingSetOperationCriteriaBuilder.endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     setOperation + "\n" +
-                    "SELECT book FROM Book book WHERE book.id > :b");
+                    "SELECT book FROM Book book WHERE book.id > :b", queryString);
         }
 
         @Test
@@ -207,9 +207,9 @@ public class UnionTests extends AbstractCoreTest {
 
 
             String queryString = where1.endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     setOperation + "\n" +
-                    "(SELECT book FROM Book book WHERE book.id > :b\nUNION\nSELECT book FROM Book book WHERE book.id > :c)");
+                    "(SELECT book FROM Book book WHERE book.id > :b\nUNION\nSELECT book FROM Book book WHERE book.id > :c)", queryString);
         }
 
         @Test
@@ -228,13 +228,13 @@ public class UnionTests extends AbstractCoreTest {
 
 
             String queryString = where1.endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     ""+ setOperation + "\n" +
                     "(SELECT book FROM Book book WHERE book.id > :c\n" +
                     "EXCEPT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :d)");
+                    "SELECT book FROM Book book WHERE book.id > :d)", queryString);
 
         }
 
@@ -251,9 +251,9 @@ public class UnionTests extends AbstractCoreTest {
 
 
             String queryString = where1.endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
-                    "SELECT book FROM Book book WHERE book.id > :b");
+                    "SELECT book FROM Book book WHERE book.id > :b", queryString);
 
         }
 
@@ -278,7 +278,7 @@ public class UnionTests extends AbstractCoreTest {
             LeafOngoingFinalSetOperationCriteriaBuilder<Book> bookLeafOngoingFinalSetOperationCriteriaBuilder = where1.endSet();
             FinalSetOperationCriteriaBuilder<Book> bookFinalSetOperationCriteriaBuilder = bookLeafOngoingFinalSetOperationCriteriaBuilder.endSet();
             String queryString = bookFinalSetOperationCriteriaBuilder.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
@@ -286,7 +286,7 @@ public class UnionTests extends AbstractCoreTest {
                     + setOperation + "\n" +
                     "SELECT book FROM Book book WHERE book.id > :d\n" +
                     "UNION\n" +
-                    "SELECT book FROM Book book WHERE book.id > :e)");
+                    "SELECT book FROM Book book WHERE book.id > :e)", queryString);
         }
 
         @Test
@@ -305,11 +305,11 @@ public class UnionTests extends AbstractCoreTest {
 
 
             String queryString = where1.endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c");
+                    "SELECT book FROM Book book WHERE book.id > :c", queryString);
 
         }
 
@@ -330,7 +330,7 @@ public class UnionTests extends AbstractCoreTest {
 
 
             String queryString = where1.endSet().endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
@@ -338,7 +338,7 @@ public class UnionTests extends AbstractCoreTest {
                     setOperation + "\n" +
                     "(SELECT book FROM Book book WHERE book.id > :d\n" +
                     "EXCEPT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :e))");
+                    "SELECT book FROM Book book WHERE book.id > :e))", queryString);
         }
 
         @Test
@@ -356,11 +356,11 @@ public class UnionTests extends AbstractCoreTest {
             StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book> where1 = startOngoingSetOperationNestedSetFunction.apply(startOngoingSetOperationCriteriaBuilder);
 
             String queryString = where1.endSet().endSet().endSet().getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c");
+                    "SELECT book FROM Book book WHERE book.id > :c", queryString);
         }
 
 
@@ -388,7 +388,7 @@ public class UnionTests extends AbstractCoreTest {
             FinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
 
             String queryString = step6.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
@@ -396,7 +396,7 @@ public class UnionTests extends AbstractCoreTest {
                     setOperation + "\n" +
                     "SELECT book FROM Book book WHERE book.id > :d\n" +
                     "EXCEPT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :e)");
+                    "SELECT book FROM Book book WHERE book.id > :e)", queryString);
         }
 
         @Test
@@ -416,11 +416,11 @@ public class UnionTests extends AbstractCoreTest {
             FinalSetOperationCriteriaBuilder<Book> step6 = step5.endSet();
 
             String queryString = step6.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c)");
+                    "SELECT book FROM Book book WHERE book.id > :c)", queryString);
         }
 
         private StartOngoingSetOperationCriteriaBuilder<Book, MiddleOngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book>, Book> nestedSetOperation(OngoingSetOperationCriteriaBuilder<Book, LeafOngoingFinalSetOperationCriteriaBuilder<Book>, Book> union) {
@@ -449,7 +449,7 @@ public class UnionTests extends AbstractCoreTest {
             FinalSetOperationCriteriaBuilder<Book> step7 = step6.endSet();
 
             String queryString = step7.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
@@ -457,7 +457,7 @@ public class UnionTests extends AbstractCoreTest {
                     setOperation + "\n" +
                     "(SELECT book FROM Book book WHERE book.id > :d\n" +
                     "EXCEPT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :e))");
+                    "SELECT book FROM Book book WHERE book.id > :e))", queryString);
         }
 
         @Test
@@ -479,11 +479,11 @@ public class UnionTests extends AbstractCoreTest {
             FinalSetOperationCriteriaBuilder<Book> step7 = step6.endSet();
 
             String queryString = step7.getQueryString();
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "INTERSECT\n" +
-                    "SELECT book FROM Book book WHERE book.id > :c)");
+                    "SELECT book FROM Book book WHERE book.id > :c)", queryString);
         }
 
     }
@@ -834,7 +834,7 @@ public class UnionTests extends AbstractCoreTest {
                     .getQueryString();
             ;
 
-            assertEquals(queryString, "SELECT book FROM Book book WHERE book.id > :a\n" +
+            assertEquals("SELECT book FROM Book book WHERE book.id > :a\n" +
                     "UNION\n" +
                     "(SELECT book FROM Book book WHERE book.id > :b\n" +
                     "EXCEPT\n" +
@@ -844,7 +844,7 @@ public class UnionTests extends AbstractCoreTest {
                     "UNION ALL\n" +
                     "(SELECT book FROM Book book WHERE book.id > :e\n" +
                     "EXCEPT ALL\n" +
-                    "SELECT book FROM Book book WHERE book.id > :f))))");
+                    "SELECT book FROM Book book WHERE book.id > :f))))", queryString);
 
         }
 
