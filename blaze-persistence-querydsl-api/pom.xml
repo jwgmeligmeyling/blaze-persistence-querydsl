@@ -9,7 +9,6 @@
         <relativePath>../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
     <artifactId>blaze-persistence-querydsl-api</artifactId>
     <dependencies>
         <dependency>
@@ -36,5 +35,63 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <subpackages>com.pallasathenagroup</subpackages>
+                    <dependencySourceIncludes>com.querydsl:*,com.blazebit:*</dependencySourceIncludes>
+                    <links>
+                        <link>https://javadoc.io/doc/com.querydsl/querydsl-jpa/${querydsl.version}</link>
+                        <link>https://javadoc.io/doc/com.querydsl/querydsl-sql/${querydsl.version}</link>
+                        <link>https://javadoc.io/doc/com.querydsl/querydsl-core/${querydsl.version}</link>
+                        <link>https://www.javadoc.io/doc/com.blazebit/blaze-persistence-core-api/${blaze-persistence.version}</link>
+                    </links>
+                    <includeDependencySources>true</includeDependencySources>
+                    <tags>
+                        <tag>
+                            <name>apiNote</name>
+                            <placement>a</placement>
+                            <head>API Note:</head>
+                        </tag>
+                        <tag>
+                            <name>example</name>
+                            <placement>a</placement>
+                            <head>Example use:</head>
+                        </tag>
+                    </tags>
+                    <additionalDependencies>
+                        <additionalDependency>
+                            <groupId>com.querydsl</groupId>
+                            <artifactId>querydsl-sql</artifactId>
+                            <version>${querydsl.version}</version>
+                        </additionalDependency>
+                    </additionalDependencies>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

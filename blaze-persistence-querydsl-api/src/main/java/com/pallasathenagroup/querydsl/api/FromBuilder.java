@@ -69,7 +69,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @return this query
      * @apiNote Full joins are only supported by some ORMs, like Hibernate.
@@ -83,7 +83,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @param alias alias
      * @return the current object
@@ -98,7 +98,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @return the current object
      * @apiNote Full joins are only supported by some ORMs, like Hibernate.
@@ -112,7 +112,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @param alias The alias under which the join can be referenced
      * @return the current object
@@ -127,7 +127,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @return the current object
      * @apiNote Full joins are only supported by some ORMs, like Hibernate.
@@ -141,7 +141,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Use {@link FetchBuilder#fetchJoin()} to add the fetchJoin parameter to this join.
      * Use {@link #lateral()} to use a lateral join for this join.
      *
-     * @param <P> The type of the join target
+     * @param <P> The join target type The type of the join target
      * @param target The join target
      * @param alias The alias under which the join can be referenced
      * @return the current object
@@ -216,7 +216,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      *
      * @param target collection
      * @param alias alias
-     * @param <P>
+     * @param <P> The join target type
      * @return the current object
      */
     <P> Q from(CollectionExpression<?, P> target, Path<P> alias);
@@ -225,7 +225,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a inner join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -234,7 +234,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a inner join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -245,7 +245,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a inner join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -254,7 +254,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a inner join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -265,7 +265,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a inner join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -274,7 +274,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a inner join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -285,7 +285,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -294,7 +294,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -305,7 +305,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -315,7 +315,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a join with the given target
      * Use fetchJoin() to add the fetchJoin parameter to this join
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -326,7 +326,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -335,7 +335,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -346,7 +346,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a left join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -355,7 +355,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a left join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -366,7 +366,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a left join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -375,7 +375,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a left join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -386,7 +386,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a left join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -395,7 +395,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a left join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -406,7 +406,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a right join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -415,7 +415,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a right join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -426,7 +426,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a right join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -435,7 +435,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a right join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object
@@ -446,7 +446,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
      * Create a right join with the given target.
      * Use fetchJoin() to add the fetchJoin parameter to this join.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @return the current object
      */
@@ -455,7 +455,7 @@ public interface FromBuilder<Q extends FromBuilder<Q>> {
     /**
      * Create a right join with the given target and alias.
      *
-     * @param <P>
+     * @param <P> The join target type
      * @param target target
      * @param alias alias
      * @return the current object

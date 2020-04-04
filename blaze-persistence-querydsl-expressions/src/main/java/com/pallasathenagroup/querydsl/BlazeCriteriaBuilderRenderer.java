@@ -82,6 +82,12 @@ import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
+/**
+ * A class for rendering a {@link BlazeJPAQuery} to a {@link CriteriaBuilder}
+ * @param <T> Query result type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class BlazeCriteriaBuilderRenderer<T> {
 
     private static final Logger logger = Logger.getLogger(BlazeCriteriaBuilderRenderer.class.getName());

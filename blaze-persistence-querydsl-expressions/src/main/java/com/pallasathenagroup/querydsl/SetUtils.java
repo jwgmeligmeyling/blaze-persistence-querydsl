@@ -3,6 +3,11 @@ package com.pallasathenagroup.querydsl;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
 
+/**
+ * Utility methods for generating set operations.
+ *
+ * Analog to {@code com.querydsl.sql.UnionUtils}.
+ */
 public final class SetUtils {
 
     @SafeVarargs

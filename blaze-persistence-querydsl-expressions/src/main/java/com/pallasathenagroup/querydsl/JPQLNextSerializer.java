@@ -10,6 +10,16 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.lang.reflect.Field;
 
+/**
+ * Slightly adjusted {@link JPQLSerializer} implementations that has
+ * basic support for rendering set operations. Its only used for implementing
+ * {@link AbstractBlazeJPAQuery#toString()} and debugging purposes.
+ * The actual rendering of the query during execution is done in
+ * {@link BlazeCriteriaBuilderRenderer}.
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class JPQLNextSerializer extends JPQLSerializer {
 
     private final StringBuilder builder;
@@ -40,14 +50,29 @@ public class JPQLNextSerializer extends JPQLSerializer {
 
     @Override
     public Void visit(SubQueryExpression<?> query, Void context) {
+        // Prevent wrapping in parens... However, this creates new exceptions
+        // for IN/NOT IN subquery and possibly other operators.
+        // TODO: fix subqueries that require parens.
         serialize(query.getMetadata(), false, null);
         return null;
     }
 
+    /**
+     * Clear the serialization buffer for serializing expression fragments rather than
+     * full queries.
+     *
+     * @since 1.0
+     */
     public void clearBuffer() {
         builder.setLength(0);
     }
 
+    /**
+     * Take and clear the buffer.
+     *
+     * @return The removed buffer contents.
+     * @since 1.0
+     */
     public String takeBuffer() {
         String res = builder.toString();
         clearBuffer();
@@ -56,6 +81,7 @@ public class JPQLNextSerializer extends JPQLSerializer {
 
     private static StringBuilder getStringBuilder(JPQLNextSerializer serializer) {
         try {
+            // Unfortunately, builder is private...
             Field builderField = SerializerBase.class.getDeclaredField("builder");
             builderField.setAccessible(true);
             return (StringBuilder) builderField.get(serializer);

@@ -1,6 +1,5 @@
 package com.pallasathenagroup.querydsl;
 
-import com.google.common.collect.ImmutableList;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.FactoryExpression;
@@ -13,7 +12,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CTEUtils {
+/**
+ * Utility methods for dealing with common table expressions (CTE's).
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
+public final class CTEUtils {
 
     public static <T> Operation<T> bind(Path<? super T> path, Expression<? extends T> expression) {
         return ExpressionUtils.operation(expression.getType(), JPQLNextOps.BIND, expression, path);

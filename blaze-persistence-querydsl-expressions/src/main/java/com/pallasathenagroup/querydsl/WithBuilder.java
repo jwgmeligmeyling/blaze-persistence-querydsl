@@ -7,9 +7,12 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.jpa.JPQLQuery;
 
 /**
- * {@code WithBuilder} is a builder for common table expressions
+ * {@code WithBuilder} is a builder for common table expressions.
+ * Analog to {@link com.querydsl.sql.WithBuilder}.
  *
- * @param <R>
+ * @param <R> Expression result type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
  */
 public class WithBuilder<R> {
 

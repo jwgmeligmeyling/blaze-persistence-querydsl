@@ -4,6 +4,13 @@ import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.Ops;
 
+/**
+ * Utility methods for creating window expressions.
+ * Analog to the window expression related utility methods in {@link com.querydsl.sql.SQLExpressions}.
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public final class WindowExpressions {
 
     /**
@@ -11,6 +18,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return all(expr)
+     * @since 1.0
      */
     public static WindowOver<Boolean> all(Expression<Boolean> expr) {
         return new WindowOver<Boolean>(expr.getType(), Ops.AggOps.BOOLEAN_ALL, expr);
@@ -21,6 +29,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return any(expr)
+     * @since 1.0
      */
     public static WindowOver<Boolean> any(Expression<Boolean> expr) {
         return new WindowOver<Boolean>(expr.getType(), Ops.AggOps.BOOLEAN_ANY, expr);
@@ -31,6 +40,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return sum(expr)
+     * @since 1.0
      */
     public static <T extends Number> WindowOver<T> sum(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.SUM_AGG, expr);
@@ -40,6 +50,7 @@ public final class WindowExpressions {
      * Start a window function expression
      *
      * @return count()
+     * @since 1.0
      */
     public static WindowOver<Long> count() {
         return new WindowOver<Long>(Long.class, Ops.AggOps.COUNT_ALL_AGG);
@@ -50,6 +61,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return count(expr)
+     * @since 1.0
      */
     public static WindowOver<Long> count(Expression<?> expr) {
         return new WindowOver<Long>(Long.class, Ops.AggOps.COUNT_AGG, expr);
@@ -60,6 +72,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return count(distinct expr)
+     * @since 1.0
      */
     public static WindowOver<Long> countDistinct(Expression<?> expr) {
         return new WindowOver<Long>(Long.class, Ops.AggOps.COUNT_DISTINCT_AGG, expr);
@@ -70,6 +83,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return avg(expr)
+     * @since 1.0
      */
     public static <T extends Number> WindowOver<T> avg(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.AVG_AGG, expr);
@@ -80,6 +94,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return min(expr)
+     * @since 1.0
      */
     public static <T extends Comparable> WindowOver<T> min(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.MIN_AGG, expr);
@@ -90,6 +105,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return max(expr)
+     * @since 1.0
      */
     public static <T extends Comparable> WindowOver<T> max(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.MAX_AGG, expr);
@@ -100,6 +116,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return lead(expr)
+     * @since 1.0
      */
     public static <T> WindowOver<T> lead(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LEAD, expr);
@@ -110,6 +127,7 @@ public final class WindowExpressions {
      *
      * @param expr expression
      * @return lag(expr)
+     * @since 1.0
      */
     public static <T> WindowOver<T> lag(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LAG, expr);
@@ -122,6 +140,7 @@ public final class WindowExpressions {
      * @param expr measure expression
      * @param n one based row index
      * @return nth_value(expr, n)
+     * @since 1.0
      */
     public static <T> WindowOver<T> nthValue(Expression<T> expr, Number n) {
         return nthValue(expr, ConstantImpl.create(n));
@@ -134,6 +153,7 @@ public final class WindowExpressions {
      * @param expr measure expression
      * @param n one based row index
      * @return nth_value(expr, n)
+     * @since 1.0
      */
     public static <T> WindowOver<T> nthValue(Expression<T> expr, Expression<? extends Number> n) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.NTH_VALUE, expr, n);
@@ -145,6 +165,7 @@ public final class WindowExpressions {
      *
      * @param num bucket size
      * @return ntile(num)
+     * @since 1.0
      */
     @SuppressWarnings("unchecked")
     public static <T extends Number & Comparable> WindowOver<T> ntile(T num) {
@@ -155,6 +176,7 @@ public final class WindowExpressions {
      * rank of the current row with gaps; same as row_number of its first peer
      *
      * @return rank()
+     * @since 1.0
      */
     public static WindowOver<Long> rank() {
         return new WindowOver<Long>(Long.class, JPQLNextOps.RANK);
@@ -164,6 +186,7 @@ public final class WindowExpressions {
      * rank of the current row without gaps; this function counts peer groups
      *
      * @return dense_rank()
+     * @since 1.0
      */
     public static WindowOver<Long> denseRank() {
         return new WindowOver<Long>(Long.class, JPQLNextOps.DENSE_RANK);
@@ -174,6 +197,7 @@ public final class WindowExpressions {
      * 1 less than the number of rows being evaluated (the entire query result set or a partition).
      *
      * @return percent_rank()
+     * @since 1.0
      */
     public static WindowOver<Double> percentRank() {
         return new WindowOver<Double>(Double.class, JPQLNextOps.PERCENT_RANK);
@@ -184,6 +208,7 @@ public final class WindowExpressions {
      * CUME_DIST calculates the cumulative distribution of a value in a group of values.
      *
      * @return cume_dist()
+     * @since 1.0
      */
     public static WindowOver<Double> cumeDist() {
         return new WindowOver<Double>(Double.class, JPQLNextOps.CUME_DIST);
@@ -194,6 +219,7 @@ public final class WindowExpressions {
      * number of the current row within its partition, counting from 1
      *
      * @return row_number()
+     * @since 1.0
      */
     public static WindowOver<Long> rowNumber() {
         return new WindowOver<Long>(Long.class, JPQLNextOps.ROW_NUMBER);
@@ -204,6 +230,7 @@ public final class WindowExpressions {
      *
      * @param expr argument
      * @return first_value(expr)
+     * @since 1.0
      */
     public static <T> WindowOver<T> firstValue(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.FIRST_VALUE, expr);
@@ -214,10 +241,10 @@ public final class WindowExpressions {
      *
      * @param expr argument
      * @return last_value(expr)
+     * @since 1.0
      */
     public static <T> WindowOver<T> lastValue(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LAST_VALUE, expr);
     }
-
 
 }

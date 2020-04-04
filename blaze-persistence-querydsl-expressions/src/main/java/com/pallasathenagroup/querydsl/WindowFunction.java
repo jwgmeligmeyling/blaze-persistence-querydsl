@@ -25,11 +25,12 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * {@code WindowFunction} is a builder for window function expressions
+ * {@code WindowFunction} is a builder for window function expressions.
+ * Analog to {@link com.querydsl.sql.WindowFunction}.
  *
  * @param <A> expression type
- *
- * @author tiwe
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
  */
 public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
 
@@ -38,13 +39,27 @@ public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
     @Nullable
     private transient volatile SimpleExpression<A> value;
 
+    /**
+     * Create a new {@code WindowFunction} that wraps an {@code Expression}.
+     *
+     * @param expr the expression
+     * @since 1.0
+     */
     public WindowFunction(Expression<A> expr) {
         super(expr.getType());
         this.target = expr;
     }
 
-    public WindowFunction(Expression<A> expr, String identifier) {
-        super(expr.getType(), identifier);
+
+    /**
+     * Create a new {@code WindowFunction} that wraps an {@code Expression}.
+     *
+     * @param expr the expression
+     * @param baseWindowName the base window name
+     * @since 1.0
+     */
+    public WindowFunction(Expression<A> expr, String baseWindowName) {
+        super(expr.getType(), baseWindowName);
         this.target = expr;
     }
 
@@ -56,31 +71,72 @@ public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
         return value;
     }
 
+    /**
+     * Create an alias for the expression.
+     *
+     * @param alias The alias
+     * @return alias expression
+     * @since 1.0
+     */
     @SuppressWarnings("unchecked")
     public SimpleExpression<A> as(Expression<A> alias) {
         return Expressions.operation(getType(), Ops.ALIAS, this, alias);
     }
 
+    /**
+     * Create an alias for the expression.
+     *
+     * @param alias The alias
+     * @return alias expression
+     * @since 1.0
+     */
     public SimpleExpression<A> as(String alias) {
         return Expressions.operation(getType(), Ops.ALIAS, this, ExpressionUtils.path(getType(), alias));
     }
 
+    /**
+     * Create a {@code this == right} expression
+     *
+     * @param expr rhs of the comparison
+     * @return this == right
+     * @since 1.0
+     */
     public BooleanExpression eq(Expression<A> expr) {
         return getValue().eq(expr);
     }
 
+    /**
+     * Create a {@code this == right} expression
+     *
+     * @param arg rhs of the comparison
+     * @return this == right
+     * @since 1.0
+     */
     public BooleanExpression eq(A arg) {
         return getValue().eq(arg);
     }
 
+    /**
+     * Create a {@code this <> right} expression
+     *
+     * @param expr rhs of the comparison
+     * @return this != right
+     * @since 1.0
+     */
     public BooleanExpression ne(Expression<A> expr) {
         return getValue().ne(expr);
     }
 
+    /**
+     * Create a {@code this <> right} expression
+     *
+     * @param arg rhs of the comparison
+     * @return this != right
+     * @since 1.0
+     */
     public BooleanExpression ne(A arg) {
         return getValue().ne(arg);
     }
-
 
     @Override
     public boolean equals(Object o) {

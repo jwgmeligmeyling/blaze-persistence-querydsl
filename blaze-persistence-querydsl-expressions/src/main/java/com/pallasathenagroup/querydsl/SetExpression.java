@@ -6,8 +6,15 @@ import com.querydsl.core.types.SubQueryExpression;
 
 import javax.annotation.Nonnegative;
 
+/**
+ * Set expresion defines an interface for set operation queries.
+ * Analog to {@link com.querydsl.sql.Union}, but also used for {@code INTERSECT} and {@code EXCEPT} operations.
+ *
+ * @param <RT> return type of the projection
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public interface SetExpression<RT> extends SubQueryExpression<RT>, Fetchable<RT>, ExtendedFetchable<RT> {
-
 
     /**
      * Set the limit / max results for the query results
@@ -24,7 +31,6 @@ public interface SetExpression<RT> extends SubQueryExpression<RT>, Fetchable<RT>
      * @return the current object
      */
     SetExpression<RT> offset(@Nonnegative long offset);
-
 
     /**
      * Define the ordering of the query results

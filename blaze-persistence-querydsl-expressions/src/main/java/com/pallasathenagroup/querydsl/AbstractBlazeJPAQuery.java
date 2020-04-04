@@ -35,9 +35,23 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Abstract base class for JPA API based implementations of the JPQLQuery interface
+ *
+ * @param <T> Query result type
+ * @param <Q> Concrete query builder type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 @SuppressWarnings("unused")
 public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T, Q>> extends AbstractJPAQuery<T, Q> implements ExtendedJPAQuery<T, Q>, ExtendedFetchable<T> {
 
+    /**
+     * Lateral join flag.
+     * Can be added using {@link QueryMetadata#addJoinFlag(JoinFlag)}.
+     * Used internally for implementing {@link #lateral()}.
+     * @since 1.0
+     */
     public static final JoinFlag LATERAL = new JoinFlag("LATERAL", JoinFlag.Position.BEFORE_TARGET);
 
     protected final CriteriaBuilderFactory criteriaBuilderFactory;
@@ -102,13 +116,13 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    public <X> Q with(Path<X> alias, SubQueryExpression<X> o) {
+    public <X> Q with(Path<X> alias, SubQueryExpression<?> o) {
         Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, o);
         return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, expr));
     }
 
     @Override
-    public <X> Q withRecursive(Path<X> alias, SubQueryExpression<X> o) {
+    public <X> Q withRecursive(Path<X> alias, SubQueryExpression<?> o) {
         // TODO recursive
         Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, o);
         return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, expr));
@@ -416,74 +430,38 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return setOperation(JPQLNextOps.SET_EXCEPT_ALL, sq);
     }
 
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> union(SubQueryExpression<RT>... sq) {
         return union(Arrays.asList(sq));
 
     }
 
-    /**
-     * Creates an union expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> unionAll(SubQueryExpression<RT>... sq) {
         return unionAll(Arrays.asList(sq));
     }
 
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> intersect(SubQueryExpression<RT>... sq) {
         return intersect(Arrays.asList(sq));
     }
 
-    /**
-     * Creates an intersect expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> intersectAll(SubQueryExpression<RT>... sq) {
         return intersectAll(Arrays.asList(sq));
     }
 
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> except(SubQueryExpression<RT>... sq) {
         return except(Arrays.asList(sq));
     }
 
-    /**
-     * Creates an except expression for the given subqueries
-     *
-     * @param <RT> union subquery result
-     * @param sq subqueries
-     * @return union
-     */
+    @Override
     @SafeVarargs
     public final <RT> SetExpression<RT> exceptAll(SubQueryExpression<RT>... sq) {
         return exceptAll(Arrays.asList(sq));
@@ -498,9 +476,8 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
      * @param expression Expression to bind the path to
      * @param <U> Attribute type
      * @return this query
-     * @deprecated Fluent API proof of concept
+     * @since 1.0
      */
-    @Deprecated
     public <U> Q bind(Path<? super U> path, Expression<? extends U> expression) {
         select(binds.bind(path, expression));
         return queryMixin.getSelf();

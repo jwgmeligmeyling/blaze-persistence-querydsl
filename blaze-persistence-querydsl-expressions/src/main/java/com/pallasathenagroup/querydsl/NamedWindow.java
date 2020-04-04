@@ -5,15 +5,33 @@ import com.querydsl.core.types.dsl.Expressions;
 
 import java.util.Objects;
 
+/**
+ * A named window. Combines a {@link WindowDefinition} and an alias.
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class NamedWindow extends WindowDefinition<NamedWindow, Void> {
 
     private final String alias;
 
+    /**
+     * Create a new named window.
+     *
+     * @param alias Alias for the window
+     * @since 1.0
+     */
     public NamedWindow(String alias) {
         super(Void.class);
         this.alias = alias;
     }
 
+    /**
+     * Get the alias for the window
+     *
+     * @return the alias
+     * @since 1.0
+     */
     public String getAlias() {
         return alias;
     }

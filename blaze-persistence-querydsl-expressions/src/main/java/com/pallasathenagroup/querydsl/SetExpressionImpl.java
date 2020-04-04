@@ -12,6 +12,14 @@ import com.querydsl.core.types.Visitor;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * Default implementation for {@link SetExpression}. Analog to {@link com.querydsl.sql.UnionImpl}.
+ *
+ * @param <T> result type
+ * @param <Q> concrete query type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class SetExpressionImpl<T, Q extends AbstractBlazeJPAQuery<T, Q>> implements SetExpression<T> {
 
     private final AbstractBlazeJPAQuery<T, ?> query;

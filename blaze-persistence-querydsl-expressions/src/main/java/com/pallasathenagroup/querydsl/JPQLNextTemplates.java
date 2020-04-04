@@ -1,11 +1,17 @@
 package com.pallasathenagroup.querydsl;
 
-import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
 import com.querydsl.jpa.DefaultQueryHandler;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.QueryHandler;
 
+/**
+ * {@code JPQLNextTemplates} extends {@link JPQLTemplates} to provide operator patterns for JPQL Next
+ * serialization
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class JPQLNextTemplates extends JPQLTemplates {
 
     public static final JPQLNextTemplates DEFAULT = new JPQLNextTemplates();

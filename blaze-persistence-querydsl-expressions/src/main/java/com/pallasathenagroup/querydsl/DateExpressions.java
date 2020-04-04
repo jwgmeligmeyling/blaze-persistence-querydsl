@@ -12,6 +12,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
 import java.util.Map;
 
+/**
+ * Utility methods for dealing with date fields
+ *
+ * @since 1.0
+ * @author Jan-Willem Gmelig Meyling
+ */
 public final class DateExpressions {
 
     private static final Map<ChronoUnit, Operator> DATE_ADD_OPS
@@ -58,6 +64,8 @@ public final class DateExpressions {
      * @param date date
      * @param amount amount
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> dateadd(ChronoUnit unit, DateTimeExpression<D> date, int amount) {
         return Expressions.dateTimeOperation(date.getType(), DATE_ADD_OPS.get(unit), date, ConstantImpl.create(amount));
@@ -70,6 +78,8 @@ public final class DateExpressions {
      * @param date date
      * @param amount amount
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> dateadd(ChronoUnit unit, DateExpression<D> date, int amount) {
         return Expressions.dateOperation(date.getType(), DATE_ADD_OPS.get(unit), date, ConstantImpl.create(amount));
@@ -82,6 +92,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             DateExpression<D> start, DateExpression<D> end) {
@@ -95,6 +107,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             D start, DateExpression<D> end) {
@@ -108,6 +122,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             DateExpression<D> start, D end) {
@@ -121,6 +137,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             DateTimeExpression<D> start, DateTimeExpression<D> end) {
@@ -134,6 +152,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             D start, DateTimeExpression<D> end) {
@@ -147,6 +167,8 @@ public final class DateExpressions {
      * @param start start
      * @param end end
      * @return difference in units
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
                                                                             DateTimeExpression<D> start, D end) {
@@ -158,6 +180,8 @@ public final class DateExpressions {
      *
      * @param unit date part to truncate to
      * @param expr truncated date
+     * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> datetrunc(ChronoUnit unit, DateExpression<D> expr) {
         return Expressions.dateOperation(expr.getType(), DATE_TRUNC_OPS.get(unit), expr);
@@ -166,8 +190,10 @@ public final class DateExpressions {
     /**
      * Truncate the given datetime expression
      *
-     * @param unit datepart to truncate to
+     * @param unit com.querydsl.sql.DatePart to truncate to
      * @param expr truncated datetime
+     * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateTimeExpression)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> datetrunc(ChronoUnit unit, DateTimeExpression<D> expr) {
         return Expressions.dateTimeOperation(expr.getType(), DATE_TRUNC_OPS.get(unit), expr);
@@ -179,6 +205,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param years years to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addYears(DateTimeExpression<D> date, int years) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_YEARS, date, ConstantImpl.create(years));
@@ -190,6 +218,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param months months to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addMonths(DateTimeExpression<D> date, int months) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_MONTHS, date, ConstantImpl.create(months));
@@ -201,6 +231,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param weeks weeks to add
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addWeeks(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addWeeks(DateTimeExpression<D> date, int weeks) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_WEEKS, date, ConstantImpl.create(weeks));
@@ -212,6 +244,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param days days to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addDays(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addDays(DateTimeExpression<D> date, int days) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_DAYS, date, ConstantImpl.create(days));
@@ -223,6 +257,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param hours hours to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addHours(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addHours(DateTimeExpression<D> date, int hours) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_HOURS, date, ConstantImpl.create(hours));
@@ -234,6 +270,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param minutes minutes to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addMinutes(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addMinutes(DateTimeExpression<D> date, int minutes) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_MINUTES, date, ConstantImpl.create(minutes));
@@ -245,6 +283,8 @@ public final class DateExpressions {
      * @param date datetime
      * @param seconds seconds to add
      * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addSeconds(DateTimeExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateTimeExpression<D> addSeconds(DateTimeExpression<D> date, int seconds) {
         return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_SECONDS, date, ConstantImpl.create(seconds));
@@ -256,6 +296,8 @@ public final class DateExpressions {
      * @param date date
      * @param years years to add
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> addYears(DateExpression<D> date, int years) {
         return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_YEARS, date, ConstantImpl.create(years));
@@ -267,6 +309,8 @@ public final class DateExpressions {
      * @param date date
      * @param months months to add
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addMonths(DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> addMonths(DateExpression<D> date, int months) {
         return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_MONTHS, date, ConstantImpl.create(months));
@@ -278,6 +322,8 @@ public final class DateExpressions {
      * @param date date
      * @param weeks weeks to add
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addWeeks(DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> addWeeks(DateExpression<D> date, int weeks) {
         return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_WEEKS, date, ConstantImpl.create(weeks));
@@ -289,6 +335,8 @@ public final class DateExpressions {
      * @param date date
      * @param days days to add
      * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addDays(DateExpression, int)
+     * @since 1.0
      */
     public static <D extends Comparable<?>> DateExpression<D> addDays(DateExpression<D> date, int days) {
         return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_DAYS, date, ConstantImpl.create(days));

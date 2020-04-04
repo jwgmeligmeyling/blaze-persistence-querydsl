@@ -29,11 +29,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * {@code WindowFirstLast} is a builder for window function expressions
+ * {@code WindowFirstLast} is a builder for window function expressions.
+ * Analog to {@link com.querydsl.sql.WindowFirstLast}.
  *
- * @author tiwe
- *
- * @param <T>
+ * @author Jan-Willem Gmelig Meyling
+ * @param <T> Result type of expression
+ * @since 1.0
  */
 public class WindowFirstLast<T> extends MutableExpressionBase<T> {
 
@@ -61,12 +62,26 @@ public class WindowFirstLast<T> extends MutableExpressionBase<T> {
         return getValue().accept(v, context);
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expression
+     * @return this window definition
+     * @since 1.0
+     */
     public WindowFirstLast<T> orderBy(ComparableExpressionBase<?> orderBy) {
         value = null;
         this.orderBy.add(orderBy.asc());
         return this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expressions
+     * @return this window definition
+     * @since 1.0
+     */
     public WindowFirstLast<T> orderBy(ComparableExpressionBase<?>... orderBy) {
         value = null;
         for (ComparableExpressionBase<?> e : orderBy) {
@@ -75,12 +90,26 @@ public class WindowFirstLast<T> extends MutableExpressionBase<T> {
         return this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expression
+     * @return this window definition
+     * @since 1.0
+     */
     public WindowFirstLast<T> orderBy(OrderSpecifier<?> orderBy) {
         value = null;
         this.orderBy.add(orderBy);
         return this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expressions
+     * @return this window definition
+     * @since 1.0
+     */
     public WindowFirstLast<T> orderBy(OrderSpecifier<?>... orderBy) {
         value = null;
         Collections.addAll(this.orderBy, orderBy);

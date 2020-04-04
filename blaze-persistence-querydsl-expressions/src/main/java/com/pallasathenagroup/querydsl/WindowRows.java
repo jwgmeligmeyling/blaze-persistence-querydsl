@@ -19,11 +19,12 @@ import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.Expression;
 
 /**
- * {@code WindowRows} provides the building of the rows/range part of the window function expression
+ * {@code WindowRows} provides the building of the rows/range part of the window function expression.
+ * Analog to {@link com.querydsl.sql.WindowRows}.
  *
  * @param <Def> Builder type
- *
- * @author tiwe
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
  */
 public class WindowRows<Def extends WindowDefinition<Def, ?>> {
 
@@ -34,36 +35,79 @@ public class WindowRows<Def extends WindowDefinition<Def, ?>> {
     private Expression<?> frameEndExpression;
 
     /**
-     * Intermediate step
+     * An interface for building a window frame clause for analytics functions.
+     *
+     * @author Jan-Willem Gmelig Meyling
+     * @since 1.0
      */
     public class Between {
 
+        /**
+         * Uses UNBOUNDED PRECEDING as lower bound and continues to the frame exclusion builder.
+         *
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public BetweenAnd unboundedPreceding() {
             frameStartType = WindowFramePositionType.UNBOUNDED_PRECEDING;
             return new BetweenAnd();
         }
 
+        /**
+         * Uses CURRENT ROW as lower bound and continues to the frame exclusion builder.
+         *
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public BetweenAnd currentRow() {
             frameStartType = WindowFramePositionType.CURRENT_ROW;
             return new BetweenAnd();
         }
 
+        /**
+         * Uses expression PRECEDING as lower bound for the frame and starts a frame between builder for the upper bound.
+         *
+         * @param expr The expression for the frame bound
+         * @return The frame between builder
+         * @since 1.0
+         */
         public BetweenAnd preceding(Expression<Integer> expr) {
             frameStartType = WindowFramePositionType.BOUNDED_PRECEDING;
             frameStartExpression = expr;
             return new BetweenAnd();
         }
 
+        /**
+         * Uses expression PRECEDING as lower bound for the frame and starts a frame between builder for the upper bound.
+         *
+         * @param i The number of preceding rows
+         * @return The frame between builder
+         * @since 1.0
+         */
         public BetweenAnd preceding(int i) {
             return preceding(ConstantImpl.create(i));
         }
 
+        /**
+         * Uses expression FOLLOWING as lower bound for the frame and starts a frame between builder for the upper bound.
+         *
+         * @param expr The expression for the frame bound
+         * @return The frame between builder
+         * @since 1.0
+         */
         public BetweenAnd following(Expression<Integer> expr) {
             frameStartType = WindowFramePositionType.BOUNDED_FOLLOWING;
             frameStartExpression = expr;
             return new BetweenAnd();
         }
 
+        /**
+         * Uses expression FOLLOWING as lower bound for the frame and starts a frame between builder for the upper bound.
+         *
+         * @param i The number of following rows
+         * @return The frame between builder
+         * @since 1.0
+         */
         public BetweenAnd following(int i) {
             return following(ConstantImpl.create(i));
         }
@@ -71,35 +115,77 @@ public class WindowRows<Def extends WindowDefinition<Def, ?>> {
 
     /**
      * Intermediate step
+     * @author Jan-Willem Gmelig Meyling
+     * @since 1.0
      */
     public class BetweenAnd {
 
+        /**
+         * Uses UNBOUNDED FOLLOWING as upper bound and continues to the frame exclusion builder.
+         *
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def unboundedFollowing() {
             frameEndType = WindowFramePositionType.UNBOUNDED_FOLLOWING;
             return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
         }
 
+        /**
+         * Uses CURRENT ROW as upper bound and continues to the frame exclusion builder.
+         *
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def currentRow() {
             frameEndType = WindowFramePositionType.CURRENT_ROW;
             return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
         }
 
+        /**
+         * Uses X PRECEDING as upper bound and continues to the frame exclusion builder.
+         *
+         * @param expr The expression for the frame bound
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def preceding(Expression<Integer> expr) {
             frameEndType = WindowFramePositionType.BOUNDED_PRECEDING;
             frameEndExpression = expr;
             return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
         }
 
+        /**
+         * Uses X PRECEDING as upper bound and continues to the frame exclusion builder.
+         *
+         * @param i The expression for the frame bound
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def preceding(int i) {
             return preceding(ConstantImpl.create(i));
         }
 
+        /**
+         * Uses X FOLLOWING as upper bound and continues to the frame exclusion builder.
+         *
+         * @param expr The expression for the frame bound
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def following(Expression<Integer> expr) {
             frameEndType = WindowFramePositionType.BOUNDED_FOLLOWING;
             frameEndExpression = expr;
             return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
         }
 
+        /**
+         * Uses X FOLLOWING as upper bound and continues to the frame exclusion builder.
+         *
+         * @param i The expression for the frame bound
+         * @return The frame exclusion builder
+         * @since 1.0
+         */
         public Def following(int i) {
             return following(ConstantImpl.create(i));
         }
@@ -112,26 +198,58 @@ public class WindowRows<Def extends WindowDefinition<Def, ?>> {
         this.frameMode = frameMode;
     }
 
+    /**
+     * Start a frame between builder.
+     *
+     * @return The frame between builder
+     * @since 1.0
+     */
     public Between between() {
         return new Between();
     }
 
+    /**
+     * Uses UNBOUNDED PRECEDING as lower bound for the frame and starts a frame between builder for the upper bound.
+     *
+     * @return The frame builder
+     * @since 1.0
+     */
     public Def unboundedPreceding() {
         frameStartType = WindowFramePositionType.UNBOUNDED_PRECEDING;
         return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
     }
 
+    /**
+     * Uses CURRENT ROW as lower bound for the frame and starts a frame between builder for the upper bound.
+     *
+     * @return The frame builder
+     * @since 1.0
+     */
     public Def currentRow() {
         frameStartType = WindowFramePositionType.CURRENT_ROW;
         return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
     }
 
+    /**
+     * Uses X PRECEDING as lower bound and continues to the frame exclusion builder.
+     *
+     * @param expr The expression for the frame bound
+     * @return The frame exclusion builder
+     * @since 1.0
+     */
     public Def preceding(Expression<Integer> expr) {
         frameStartType = WindowFramePositionType.BOUNDED_PRECEDING;
         frameStartExpression = expr;
         return rv.withFrame(frameMode, frameStartType, frameStartExpression, frameEndType, frameEndExpression);
     }
 
+    /**
+     * Uses X PRECEDING as lower bound and continues to the frame exclusion builder.
+     *
+     * @param i The number of preceding rows
+     * @return The frame exclusion builder
+     * @since 1.0
+     */
     public Def preceding(int i) {
         return preceding(ConstantImpl.create(i));
     }

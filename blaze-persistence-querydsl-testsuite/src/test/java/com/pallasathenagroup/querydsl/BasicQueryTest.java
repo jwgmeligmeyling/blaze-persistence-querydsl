@@ -1,6 +1,7 @@
 package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.CriteriaBuilder;
+import com.blazebit.persistence.Queryable;
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCte;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCteB;
@@ -39,8 +40,6 @@ import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
 import static com.pallasathenagroup.querydsl.SetUtils.intersect;
 import static com.pallasathenagroup.querydsl.SetUtils.union;
-import static com.pallasathenagroup.querydsl.WindowExpressions.lastValue;
-import static com.pallasathenagroup.querydsl.WindowExpressions.rowNumber;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static com.querydsl.jpa.JPAExpressions.selectFrom;
 import static org.junit.Assert.assertFalse;
@@ -90,9 +89,8 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .where(testEntity.field.length().gt(1));
 
             BlazeCriteriaBuilderRenderer<Tuple> blazeCriteriaBuilderRenderer = new BlazeCriteriaBuilderRenderer<>(cbf, entityManager, JPQLTemplates.DEFAULT);
-            blazeCriteriaBuilderRenderer.render(query);
-            CriteriaBuilder<Tuple> criteriaBuilder = blazeCriteriaBuilderRenderer.getCriteriaBuilder();
-            List<Tuple> fetch = criteriaBuilder.getResultList();
+            Queryable<Tuple, ?> queryable = blazeCriteriaBuilderRenderer.render(query);
+            List<Tuple> fetch = queryable.getResultList();
             assertFalse(fetch.isEmpty());
         });
     }
@@ -100,7 +98,9 @@ public class BasicQueryTest extends AbstractCoreTest {
     @Test
     public void testThroughBlazeJPAQuery() {
         doInJPA(entityManager -> {
-            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
+            QTestEntity testEntity = QTestEntity.testEntity;
+
+            BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<Tuple>(entityManager, cbf).from(testEntity)
                     .select(testEntity.field.as("blep"), testEntity.field.substring(2))
                     .where(testEntity.field.length().gt(1));
 
@@ -157,7 +157,7 @@ public class BasicQueryTest extends AbstractCoreTest {
         doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
-                    .select(testEntity.field.as("blep"), rowNumber(), lastValue(testEntity.field).over().partitionBy(testEntity.id))
+                    .select(testEntity.field.as("blep"), WindowExpressions.rowNumber(), WindowExpressions.lastValue(testEntity.field).over().partitionBy(testEntity.id))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
@@ -174,7 +174,7 @@ public class BasicQueryTest extends AbstractCoreTest {
 
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .window(blep)
-                    .select(testEntity.field.as("blep"), rowNumber().over(blep), lastValue(testEntity.field).over(blep))
+                    .select(testEntity.field.as("blep"), WindowExpressions.rowNumber().over(blep), WindowExpressions.lastValue(testEntity.field).over(blep))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
@@ -243,7 +243,7 @@ public class BasicQueryTest extends AbstractCoreTest {
             theBook.id = 1337L;
             theBook.name = "test";
 
-            List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
+            List<Book> fetch = new BlazeJPAQuery<Book>(entityManager, cbf)
                     .fromValues(book, Collections.singleton(theBook))
                     .select(book)
                     .fetch();
@@ -267,7 +267,7 @@ public class BasicQueryTest extends AbstractCoreTest {
     }
 
     @Test
-    public void testComplexUnion() {
+    public void  testComplexUnion() {
         doInJPA(entityManager -> {
 
             Book theBook = new Book();
@@ -283,14 +283,13 @@ public class BasicQueryTest extends AbstractCoreTest {
 
         doInJPA(entityManager -> {
             List<Book> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
-                    .union(select(book).from(book).where(book.id.eq(1337L)),
+                    .union(
                         new BlazeJPAQuery<TestEntity>().intersect(
                                 select(book).from(book).where(book.id.eq(41L)),
                                 new BlazeJPAQuery<TestEntity>().except(
                                         select(book).from(book).where(book.id.eq(42L)),
                                         select(book).from(book).where(book.id.eq(43L)))),
-                                select(book).from(book).where(book.id.eq(46L))
-                            )
+                        select(book).from(book).where(book.id.eq(46L)))
                     .fetch();
 
             assertNotNull(fetch);
@@ -364,6 +363,20 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .fetch();
 
             assertNotNull(fetch);
+        });
+    }
+
+    @Test
+    public void testCTEWithBinds2() {
+        doInJPA(entityManager -> {
+            List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
+                .with(idHolderCte, select(
+                        CTEUtils.bind(idHolderCte.id, book.id),
+                        CTEUtils.bind(idHolderCte.name, book.name)).from(book))
+                .select(idHolderCte.id).from(idHolderCte)
+                .fetch();
+
+                assertNotNull(fetch);
         });
     }
 
@@ -442,7 +455,6 @@ public class BasicQueryTest extends AbstractCoreTest {
                     .fetch();
 
             assertNotNull(fetch);
-
         });
     }
 

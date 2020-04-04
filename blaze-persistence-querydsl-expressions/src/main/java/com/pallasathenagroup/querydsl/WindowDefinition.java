@@ -21,6 +21,14 @@ import static com.blazebit.persistence.parser.expression.WindowFrameMode.GROUPS;
 import static com.blazebit.persistence.parser.expression.WindowFrameMode.RANGE;
 import static com.blazebit.persistence.parser.expression.WindowFrameMode.ROWS;
 
+/**
+ * A base class for window definition expressions.
+ *
+ * @param <Q> Concrete window type
+ * @param <T> Expression result type
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends MutableExpressionBase<T> {
 
     private static final String ORDER_BY = "order by ";
@@ -43,10 +51,22 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
     private WindowFramePositionType frameEndType;
     private Expression<?> frameEndExpression;
 
+    /**
+     * Get the OrderSpecifiers
+     *
+     * @return order by
+     * @since 1.0
+     */
     public List<OrderSpecifier<?>> getOrderBy() {
         return orderBy;
     }
 
+    /**
+     * Get the partition specifiers
+     *
+     * @return partition by
+     * @since 1.0
+     */
     public List<Expression<?>> getPartitionBy() {
         return partitionBy;
     }
@@ -67,6 +87,12 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
         return getValue().accept(v, context);
     }
 
+    /**
+     * Construct a template expression for this Window Definition.
+     *
+     * @return template expression
+     * @since 1.0
+     */
     public Expression<T> getValue() {
         if (value == null) {
             int size = 0;
@@ -174,12 +200,26 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
         return value;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expression
+     * @return this window definition
+     * @since 1.0
+     */
     public Q orderBy(ComparableExpressionBase<?> orderBy) {
         value = null;
         this.orderBy.add(orderBy.asc());
         return (Q) this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expressions
+     * @return this window definition
+     * @since 1.0
+     */
     public Q orderBy(ComparableExpressionBase<?>... orderBy) {
         value = null;
         for (ComparableExpressionBase<?> e : orderBy) {
@@ -188,24 +228,52 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
         return (Q) this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expression
+     * @return this window definition
+     * @since 1.0
+     */
     public Q  orderBy(OrderSpecifier<?> orderBy) {
         value = null;
         this.orderBy.add(orderBy);
         return (Q) this;
     }
 
+    /**
+     * Add an order by clause to this window definition.
+     *
+     * @param orderBy order by expressions
+     * @return this window definition
+     * @since 1.0
+     */
     public Q orderBy(OrderSpecifier<?>... orderBy) {
         value = null;
         Collections.addAll(this.orderBy, orderBy);
         return (Q) this;
     }
 
+    /**
+     * Add an partition by clause to this window definition.
+     *
+     * @param partitionBy partition by expression
+     * @return this window definition
+     * @since 1.0
+     */
     public Q partitionBy(Expression<?> partitionBy) {
         value = null;
         this.partitionBy.add(partitionBy);
         return (Q) this;
     }
 
+    /**
+     * Add an partition by clause to this window definition.
+     *
+     * @param partitionBy partition by expressions
+     * @return this window definition
+     * @since 1.0
+     */
     public Q partitionBy(Expression<?>... partitionBy) {
         value = null;
         Collections.addAll(this.partitionBy, partitionBy);
@@ -221,42 +289,96 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
         return (Q) this;
     }
 
+    /**
+     * Return the base window name
+     *
+     * @return the base window name, if null if none
+     * @since 1.0
+     */
     public String getBaseWindowName() {
         return baseWindowName;
     }
 
+    /**
+     * Return the frame mode
+     *
+     * @return the frame mode, or null if none
+     * @since 1.0
+     */
     public WindowFrameMode getFrameMode() {
         return frameMode;
     }
 
+    /**
+     * Return the frame start type
+     *
+     * @return the frame start type, or null if none
+     * @since 1.0
+     */
     public WindowFramePositionType getFrameStartType() {
         return frameStartType;
     }
 
+    /**
+     * Return the frame start expression
+     *
+     * @return the frame start expression, or null if none
+     * @since 1.0
+     */
     public Expression<?> getFrameStartExpression() {
         return frameStartExpression;
     }
 
+    /**
+     * Return the frame end type
+     *
+     * @return the frame end type, or null if none
+     * @since 1.0
+     */
     public WindowFramePositionType getFrameEndType() {
         return frameEndType;
     }
 
+    /**
+     * Return the frame end expression
+     *
+     * @return the frame end expression, or null if none
+     * @since 1.0
+     */
     public Expression<?> getFrameEndExpression() {
         return frameEndExpression;
     }
 
+    /**
+     * Initiate a {@code WindowRows} builder in {@code ROWS} mode.
+     *
+     * @return {@code ROWS} clause builder
+     * @since 1.0
+     */
     public WindowRows<Q> rows() {
         value = null;
         int offset = orderBy.size() + partitionBy.size() + 1;
         return new WindowRows<Q>((Q) this, ROWS);
     }
 
+    /**
+     * Initiate a {@code WindowRows} builder in {@code RANGE} mode.
+     *
+     * @return {@code RANGE} clause builder
+     * @since 1.0
+     */
     public WindowRows<Q> range() {
         value = null;
         int offset = orderBy.size() + partitionBy.size() + 1;
         return new WindowRows<Q>((Q) this, RANGE);
     }
 
+    /**
+     * Initiate a {@code WindowRows} builder in {@code GROUPS} mode.
+     *
+     * @return {@code GROUPS} clause builder
+     * @since 1.0
+     */
     public WindowRows<Q> groups() {
         value = null;
         int offset = orderBy.size() + partitionBy.size() + 1;

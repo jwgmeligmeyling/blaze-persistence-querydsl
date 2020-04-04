@@ -12,6 +12,12 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
+/**
+ * {@code JPQLNextOps} provides JPQL Next specific operators.
+ *
+ * @author Jan-Willem Gmelig Meyling
+ * @since 1.0
+ */
 public enum JPQLNextOps implements Operator {
     PAGE_POSITION(Long.class),
     ENTITY_FUNCTION(Object.class),
