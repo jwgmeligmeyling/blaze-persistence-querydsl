@@ -54,7 +54,7 @@ public class CriteriaBuilderImpl<T> extends AbstractFullQueryBuilder<T, Criteria
 
     public SetExpression<T> getSetOperation(JPQLNextOps operation, SubQueryExpression<T>... args) {
         BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-        return subQuery.setOperation(operation, Collections.unmodifiableList(Arrays.asList(args)));
+        return subQuery.setOperation(operation, false, Collections.unmodifiableList(Arrays.asList(args)));
     }
 
     public OngoingFinalSetOperationCriteriaBuilder<LeafOngoingFinalSetOperationCriteriaBuilder<T>> endWith(SubQueryExpression<T> subQueryExpression, JPQLNextOps setOperation) {

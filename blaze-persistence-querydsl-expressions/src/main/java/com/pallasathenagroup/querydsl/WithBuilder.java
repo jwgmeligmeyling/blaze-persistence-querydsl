@@ -14,20 +14,8 @@ import com.querydsl.jpa.JPQLQuery;
  * @author Jan-Willem Gmelig Meyling
  * @since 1.0
  */
-public class WithBuilder<R> {
+public interface WithBuilder<R> {
 
-    private final QueryMixin<R> queryMixin;
-
-    private final Expression<?> alias;
-
-    public WithBuilder(QueryMixin<R> queryMixin, Expression<?> alias) {
-        this.queryMixin = queryMixin;
-        this.alias = alias;
-    }
-
-    public R as(Expression<?> expr) {
-        Expression<?> flag = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, expr);
-        return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, flag));
-    }
+    R as(Expression<?> expr);
 
 }

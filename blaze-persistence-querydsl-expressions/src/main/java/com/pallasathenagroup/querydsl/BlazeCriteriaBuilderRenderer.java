@@ -79,6 +79,7 @@ import java.util.logging.Logger;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.LEFT_NESTED_SET_OPERATIONS;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
+import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_ALIAS;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
@@ -134,6 +135,9 @@ public class BlazeCriteriaBuilderRenderer<T> {
                     if (criteriaBuilder instanceof StartOngoingSetOperationBuilder) {
                         StartOngoingSetOperationBuilder<?, ?, ?> ob = (StartOngoingSetOperationBuilder<?, ?, ?>) criteriaBuilder;
                         criteriaBuilder = ob.startSet();
+                    } else if (criteriaBuilder instanceof SubqueryInitiator) {
+                        SubqueryInitiator<?> subqueryInitiator = (SubqueryInitiator<?>) criteriaBuilder;
+                        criteriaBuilder = subqueryInitiator.startSet();
                     } else {
                         criteriaBuilder = criteriaBuilderFactory.startSet(entityManager, Object.class);
                     }
@@ -276,6 +280,7 @@ public class BlazeCriteriaBuilderRenderer<T> {
                             for (int i = 0; i < projection.size(); i++) {
                                 Expression<?> projExpression = projection.get(i);
                                 Path<?> alias = null;
+                                Path<?> cteEntityPath = null;
 
                                 if (projExpression instanceof Operation) {
                                     Operation<?> projOperation = (Operation<?>) projExpression;
@@ -666,6 +671,8 @@ public class BlazeCriteriaBuilderRenderer<T> {
             case NullsLast:
                 criteriaBuilder.orderBy(orderExpression, ascending, false);
                 break;
+            default:
+                throw new IllegalArgumentException("Null handling not implemented for " + orderSpecifier.getNullHandling());
         }
     }
 
@@ -686,20 +693,13 @@ public class BlazeCriteriaBuilderRenderer<T> {
                 (expression) -> finalAlias != null ? selectBuilder.selectSubqueries(expression, finalAlias) : selectBuilder.selectSubqueries(expression));
     }
 
-    private int length = 0;
-
     private String renderExpression(Expression<?> select) {
         serializer.clearBuffer();
         select.accept(serializer, null);
         return serializer.takeBuffer();
     }
 
-
     private final List<SubqueryInitiator<?>> subqueryInitiatorStack = new ArrayList<SubqueryInitiator<?>>();;
-
-    private SubqueryInitiator<?> getSubqueryInitiator() {
-        return subqueryInitiatorStack.get(subqueryInitiatorStack.size() - 1);
-    }
 
     private void pushSubqueryInitiator(SubqueryInitiator<?> subqueryInitiator) {
         subqueryInitiatorStack.add(subqueryInitiator);
@@ -718,9 +718,7 @@ public class BlazeCriteriaBuilderRenderer<T> {
         return subQueryToLabel;
     }
 
-    private Path<?> cteEntityPath;
     private List<Path<?>> cteAliases;
-    private boolean recursive;
 
     private <X> X setExpressionSubqueries(Expression<?> expression, Function<String, ? extends X> setExpression, Function<String, MultipleSubqueryInitiator<? extends X>> setExpressionSubqueries) {
         String expressionString = renderExpression(expression);
@@ -735,11 +733,12 @@ public class BlazeCriteriaBuilderRenderer<T> {
                 Object o = serializeSubQuery(initiator, entry.getKey());
 
                 if (o instanceof SubqueryBuilder) {
-                    ((SubqueryBuilder<?>) o).end();
+                    o = ((SubqueryBuilder<?>) o).end();
                 } else if (o instanceof FinalSetOperationSubqueryBuilder) {
-                    ((FinalSetOperationSubqueryBuilder<?>) o).end();
+                    o = ((FinalSetOperationSubqueryBuilder<?>) o).end();
                 }
 
+                assert subqueryInitiator == o : "Expected SubqueryInitiator to return original MultipleSubqueryInitiator";
                 popSubqueryInitiator();
             }
             return subqueryInitiator.end();
@@ -917,17 +916,21 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
 
         @Override
-        protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
+        protected void visitOperation(final Class<?> type, final Operator operator, final List<? extends Expression<?>> args) {
             if (operator instanceof JPQLNextOps) {
                 switch ((JPQLNextOps) operator) {
+                    case WITH_RECURSIVE_ALIAS:
                     case WITH_ALIAS:
+                        boolean recursive = operator == WITH_RECURSIVE_ALIAS;
                         Expression<?> withColumns = args.get(0);
+                        Expression<?> subQueryExpression = args.get(1);
                         withColumns.accept(this, null);
+                        Class<?> cteType = withColumns.getType();
 
                         if (recursive) {
-                            Operation<?> unionOperation = args.get(1).accept(GetOperationVisitor.INSTANCE, null);
+                            Operation<?> unionOperation = subQueryExpression.accept(GetOperationVisitor.INSTANCE, null);
                             if (unionOperation == null) {
-                                SubQueryExpression<?> setSubquery = args.get(1).accept(GetSubQueryVisitor.INSTANCE, null);
+                                SubQueryExpression<?> setSubquery = subQueryExpression.accept(GetSubQueryVisitor.INSTANCE, null);
                                 QueryFlag setFlag = getSetOperationFlag(setSubquery.getMetadata());
                                 unionOperation = setFlag.getFlag().accept(GetOperationVisitor.INSTANCE, null);
                             }
@@ -935,15 +938,14 @@ public class BlazeCriteriaBuilderRenderer<T> {
                             SubQueryExpression<?> subQuery = (SubQueryExpression<?>) unionOperation.getArg(0);
                             SelectRecursiveCTECriteriaBuilder<?> baseCriteriaBuilder =
                                     (SelectRecursiveCTECriteriaBuilder<?>)
-                                            serializeSubQuery(criteriaBuilder.withRecursive(cteEntityPath.getType()), subQuery);
+                                            serializeSubQuery(criteriaBuilder.withRecursive(cteType), subQuery);
                             SelectCTECriteriaBuilder<?> recursiveCriteriaBuilder = unionOperation.getOperator() == SET_UNION ?
                                     baseCriteriaBuilder.union() : baseCriteriaBuilder.unionAll();
                             subQuery = (SubQueryExpression<?>) unionOperation.getArg(1);
                             ((SelectCTECriteriaBuilder<?>) serializeSubQuery(recursiveCriteriaBuilder, subQuery)).end();
                         } else {
-                            FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(type);
+                            FullSelectCTECriteriaBuilder<?> cteBuilder = criteriaBuilder.with(cteType);
 
-                            Expression<?> subQueryExpression = args.get(1);
                             Object result = serializeSubQuery(cteBuilder, subQueryExpression);
 
                             if (result instanceof FinalSetOperationCTECriteriaBuilder) {
@@ -955,8 +957,6 @@ public class BlazeCriteriaBuilderRenderer<T> {
                         return;
                     case WITH_RECURSIVE_COLUMNS:
                     case WITH_COLUMNS:
-                        recursive = operator == WITH_RECURSIVE_COLUMNS;
-                        cteEntityPath = (EntityPath<?>) args.get(0);
                         cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
                         return;
                 }

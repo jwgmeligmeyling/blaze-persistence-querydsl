@@ -32,6 +32,7 @@ import javax.persistence.TypedQuery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -112,7 +113,13 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     public WithBuilder<Q> with(EntityPath<?> alias, Path<?>... columns) {
         Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
         Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_COLUMNS, alias, columnsCombined);
-        return new WithBuilder<>(queryMixin, aliasCombined);
+        return new WithBuilder<Q>() {
+            @Override
+            public Q as(Expression expr) {
+                Expression<?> flag = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, aliasCombined, expr);
+                return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, flag));
+            }
+        };
     }
 
     @Override
@@ -123,8 +130,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     @Override
     public <X> Q withRecursive(Path<X> alias, SubQueryExpression<?> o) {
-        // TODO recursive
-        Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_ALIAS, alias, o);
+        Expression<?> expr = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_ALIAS, alias, o);
         return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, expr));
     }
 
@@ -132,7 +138,13 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     public WithBuilder<Q> withRecursive(EntityPath<?> alias, Path<?>... columns) {
         Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
         Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
-        return new WithBuilder<>(queryMixin, aliasCombined);
+        return new WithBuilder<Q>() {
+            @Override
+            public Q as(Expression expr) {
+                Expression<?> flag = ExpressionUtils.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_ALIAS, aliasCombined, expr);
+                return queryMixin.addFlag(new QueryFlag(QueryFlag.Position.WITH, flag));
+            }
+        };
     }
 
     @Override
@@ -162,6 +174,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             query.setHint(entry.getKey(), entry.getValue());
         }
 
+        logQuery(criteriaBuilder.getQueryString(), Collections.emptyMap());
         return query;
     }
 
@@ -182,10 +195,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     public String getQueryString() {
-        System.out.println("Query string for: " + toString());
-        String queryString = getQueryable(null).getQueryString();
-        System.out.println("Is: " + queryString);
-        return queryString;
+        return getQueryable(null).getQueryString();
     }
 
     protected Queryable<T, ?> getQueryable(@Nullable QueryModifiers modifiers) {
@@ -390,44 +400,44 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     // Union stuff
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public <RT> SetExpression<RT> setOperation(JPQLNextOps operator, List<SubQueryExpression<RT>> sq) {
+    public <RT> SetExpression<RT> setOperation(JPQLNextOps operator, boolean wrapSets, List<SubQueryExpression<RT>> sq) {
         queryMixin.setProjection(sq.get(0).getMetadata().getProjection());
         if (!queryMixin.getMetadata().getJoins().isEmpty()) {
             throw new IllegalArgumentException("Don't mix union and from");
         }
 
-        this.queryMixin.addFlag(new SetOperationFlag(SetUtils.setOperation(operator, sq.toArray(new Expression[0]))));
+        this.queryMixin.addFlag(new SetOperationFlag(SetUtils.setOperation(operator, wrapSets, sq.toArray(new Expression[0]))));
         return new SetExpressionImpl(this);
     }
 
     @Override
     public <RT> SetExpression<RT> union(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_UNION, sq);
+        return setOperation(JPQLNextOps.SET_UNION, true, sq);
     }
 
     @Override
     public <RT> SetExpression<RT> unionAll(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_UNION_ALL, sq);
+        return setOperation(JPQLNextOps.SET_UNION_ALL, true, sq);
     }
 
     @Override
     public <RT> SetExpression<RT> intersect(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_INTERSECT, sq);
+        return setOperation(JPQLNextOps.SET_INTERSECT, true, sq);
     }
 
     @Override
     public <RT> SetExpression<RT> intersectAll(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_INTERSECT_ALL, sq);
+        return setOperation(JPQLNextOps.SET_INTERSECT_ALL, true, sq);
     }
 
     @Override
     public <RT> SetExpression<RT> except(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_EXCEPT, sq);
+        return setOperation(JPQLNextOps.SET_EXCEPT, true, sq);
     }
 
     @Override
     public <RT> SetExpression<RT> exceptAll(List<SubQueryExpression<RT>> sq) {
-        return setOperation(JPQLNextOps.SET_EXCEPT_ALL, sq);
+        return setOperation(JPQLNextOps.SET_EXCEPT_ALL, true, sq);
     }
 
     @Override

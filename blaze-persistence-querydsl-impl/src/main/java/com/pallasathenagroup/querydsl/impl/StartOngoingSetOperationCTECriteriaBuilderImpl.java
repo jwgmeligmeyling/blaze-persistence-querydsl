@@ -56,7 +56,7 @@ public class StartOngoingSetOperationCTECriteriaBuilderImpl<T, X, Y> extends Abs
 
     public SetExpression<T> getSetOperation(JPQLNextOps operation, SubQueryExpression<T>... args) {
         BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-        return subQuery.setOperation(operation, Collections.unmodifiableList(Arrays.asList(args)));
+        return subQuery.setOperation(operation, false, Collections.unmodifiableList(Arrays.asList(args)));
     }
 
 

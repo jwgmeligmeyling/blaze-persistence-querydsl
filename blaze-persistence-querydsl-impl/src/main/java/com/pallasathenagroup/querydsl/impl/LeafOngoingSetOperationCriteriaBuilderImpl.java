@@ -50,7 +50,7 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         boolean builderResultNotEmpty = blazeJPAQuery.accept(NotEmptySetVisitor.INSTANCE, null).booleanValue();
         if (builderResultNotEmpty) {
             BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-            return subQuery.setOperation(operation, Collections.unmodifiableList(Arrays.asList(lhs, blazeJPAQuery)));
+            return subQuery.setOperation(operation, false, Collections.unmodifiableList(Arrays.asList(lhs, blazeJPAQuery)));
         }
         if (lhs instanceof SetExpression) {
             return (SetExpression<T>) lhs;
@@ -111,7 +111,7 @@ public class LeafOngoingSetOperationCriteriaBuilderImpl<T>
         }
 
         BlazeJPAQuery<Object> subQuery = blazeJPAQuery.createSubQuery();
-        SetExpression<T> union = subQuery.setOperation(setOperation, Collections.unmodifiableList(Arrays.asList(lhs, subQueryExpression)));
+        SetExpression<T> union = subQuery.setOperation(setOperation, false, Collections.unmodifiableList(Arrays.asList(lhs, subQueryExpression)));
 
         return new OngoingFinalSetOperationCriteriaBuilderImpl<LeafOngoingFinalSetOperationCriteriaBuilder<T>, T>(union) {
             @Override
