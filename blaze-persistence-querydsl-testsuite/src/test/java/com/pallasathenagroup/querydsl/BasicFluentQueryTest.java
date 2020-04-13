@@ -22,7 +22,6 @@ import com.querydsl.core.types.dsl.Param;
 import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.JPQLTemplates;
-import com.querydsl.jpa.impl.JPAQuery;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,10 +38,7 @@ import static com.pallasathenagroup.querydsl.QAuthor.author;
 import static com.pallasathenagroup.querydsl.QBook.book;
 import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
-import static com.pallasathenagroup.querydsl.SetUtils.intersect;
-import static com.pallasathenagroup.querydsl.SetUtils.union;
-import static com.querydsl.jpa.JPAExpressions.select;
-import static com.querydsl.jpa.JPAExpressions.selectFrom;
+import static com.pallasathenagroup.querydsl.JPQLNextExpressions.*;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
@@ -170,8 +166,8 @@ public class BasicFluentQueryTest extends AbstractCoreTest {
             CriteriaBuilder<Tuple> query = CriteriaBuilder.<Tuple> getCriteriaBuilder(entityManager, cbf)
                     .from(testEntity)
                     .select(testEntity.field.as("blep"))
-                    .select(WindowExpressions.rowNumber())
-                    .select(WindowExpressions.lastValue(testEntity.field).over().partitionBy(testEntity.id))
+                    .select(rowNumber())
+                    .select(lastValue(testEntity.field).over().partitionBy(testEntity.id))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.getResultList();
@@ -190,8 +186,8 @@ public class BasicFluentQueryTest extends AbstractCoreTest {
                     .from(testEntity)
                     .window(blep)
                     .select(testEntity.field.as("blep"))
-                    .select(WindowExpressions.rowNumber().over(blep))
-                    .select(WindowExpressions.lastValue(testEntity.field).over(blep))
+                    .select(rowNumber().over(blep))
+                    .select(lastValue(testEntity.field).over(blep))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.getResultList();

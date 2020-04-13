@@ -1,6 +1,5 @@
 package com.pallasathenagroup.querydsl;
 
-import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.Queryable;
 import com.blazebit.persistence.testsuite.AbstractCoreTest;
 import com.blazebit.persistence.testsuite.entity.ParameterOrderCte;
@@ -40,8 +39,7 @@ import static com.pallasathenagroup.querydsl.QIdHolderCte.idHolderCte;
 import static com.pallasathenagroup.querydsl.QTestEntity.testEntity;
 import static com.pallasathenagroup.querydsl.SetUtils.intersect;
 import static com.pallasathenagroup.querydsl.SetUtils.union;
-import static com.querydsl.jpa.JPAExpressions.select;
-import static com.querydsl.jpa.JPAExpressions.selectFrom;
+import static com.pallasathenagroup.querydsl.JPQLNextExpressions.*;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
@@ -157,7 +155,7 @@ public class BasicQueryTest extends AbstractCoreTest {
         doInJPA(entityManager -> {
             QTestEntity sub = new QTestEntity("sub");
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
-                    .select(testEntity.field.as("blep"), WindowExpressions.rowNumber(), WindowExpressions.lastValue(testEntity.field).over().partitionBy(testEntity.id))
+                    .select(testEntity.field.as("blep"), rowNumber(), lastValue(testEntity.field).over().partitionBy(testEntity.id))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
@@ -174,7 +172,7 @@ public class BasicQueryTest extends AbstractCoreTest {
 
             BlazeJPAQuery<Tuple> query = new BlazeJPAQuery<TestEntity>(entityManager, cbf).from(testEntity)
                     .window(blep)
-                    .select(testEntity.field.as("blep"), WindowExpressions.rowNumber().over(blep), WindowExpressions.lastValue(testEntity.field).over(blep))
+                    .select(testEntity.field.as("blep"), rowNumber().over(blep), lastValue(testEntity.field).over(blep))
                     .where(testEntity.id.in(select(sub.id).from(sub)));
 
             List<Tuple> fetch = query.fetch();
