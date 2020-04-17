@@ -24,6 +24,8 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.AbstractJPAQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
@@ -46,6 +48,8 @@ import java.util.Map;
  */
 @SuppressWarnings("unused")
 public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T, Q>> extends AbstractJPAQuery<T, Q> implements ExtendedJPAQuery<T, Q>, ExtendedFetchable<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractBlazeJPAQuery.class);
 
     /**
      * Lateral join flag.
@@ -171,7 +175,11 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         }
 
         for (Map.Entry<String, Object> entry : hints.entries()) {
-            query.setHint(entry.getKey(), entry.getValue());
+            try {
+                query.setHint(entry.getKey(), entry.getValue());
+            } catch (UnsupportedOperationException e) {
+                logger.warn("Failed to set query hint", e);
+            }
         }
 
         logQuery(criteriaBuilder.getQueryString(), Collections.emptyMap());
@@ -213,9 +221,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         }
 
         for (Map.Entry<String, Object> entry : hints.entries()) {
-            if (entry.getValue() instanceof String) {
-                criteriaBuilder.setProperty(entry.getKey(), (String) entry.getValue());
-            }
+            criteriaBuilder.setProperty(entry.getKey(), entry.getValue().toString());
         }
 
         if (cachable) {

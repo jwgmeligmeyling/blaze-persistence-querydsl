@@ -16,7 +16,14 @@ import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLOps;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -695,5 +702,77 @@ public class JPQLNextExpressions {
      */
     public static <T> WindowOver<T> lastValue(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LAST_VALUE, expr);
+    }
+
+    public static <T> Expression<T> cast(Class<T> result, Expression<?> expression) {
+        if (Boolean.class.equals(result) || boolean.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_BOOLEAN, expression);
+        } else if (Byte.class.equals(result) || byte.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_BYTE, expression);
+        } else if (Short.class.equals(result) || short.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_SHORT, expression);
+        } else if (Long.class.equals(result) || long.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_LONG, expression);
+        } else if (Integer.class.equals(result) || int.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_INTEGER, expression);
+        } else if (Float.class.equals(result) || float.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_FLOAT, expression);
+        } else if (Double.class.equals(result) || double.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_DOUBLE, expression);
+        } else if (Character.class.equals(result) || char.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_CHARACTER, expression);
+        } else if (String.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_STRING, expression);
+        } else if (BigInteger.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_BIGINTEGER, expression);
+        } else if (BigDecimal.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_BIGDECIMAL, expression);
+        } else if (Calendar.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_CALENDAR, expression);
+        } else if (Timestamp.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_TIMESTAMP, expression);
+        } else if (Time.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_TIME, expression);
+        } else if (Date.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.CAST_DATE, expression);
+        } else {
+            throw new IllegalArgumentException("No cast operation for " + result.getName());
+        }
+    }
+
+    public static <T> Expression<T> treat(Class<T> result, Expression<?> expression) {
+        if (Boolean.class.equals(result) || boolean.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_BOOLEAN, expression);
+        } else if (Byte.class.equals(result) || byte.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_BYTE, expression);
+        } else if (Short.class.equals(result) || short.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_SHORT, expression);
+        } else if (Long.class.equals(result) || long.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_LONG, expression);
+        } else if (Integer.class.equals(result) || int.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_INTEGER, expression);
+        } else if (Float.class.equals(result) || float.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_FLOAT, expression);
+        } else if (Double.class.equals(result) || double.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_DOUBLE, expression);
+        } else if (Character.class.equals(result) || char.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_CHARACTER, expression);
+        } else if (String.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_STRING, expression);
+        } else if (BigInteger.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_BIGINTEGER, expression);
+        } else if (BigDecimal.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_BIGDECIMAL, expression);
+        } else if (Calendar.class.equals(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_CALENDAR, expression);
+        } else if (Timestamp.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_TIMESTAMP, expression);
+        } else if (Time.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_TIME, expression);
+        } else if (Date.class.isAssignableFrom(result)) {
+            return Expressions.simpleOperation(result, JPQLNextOps.TREAT_DATE, expression);
+        } else {
+            throw new IllegalArgumentException("No cast operation for " + result.getName());
+        }
     }
 }

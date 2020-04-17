@@ -80,7 +80,6 @@ import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.LEFT_NESTED_SET_OPERATIONS;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.SET_UNION;
 import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_ALIAS;
-import static com.pallasathenagroup.querydsl.JPQLNextOps.WITH_RECURSIVE_COLUMNS;
 import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
 /**
@@ -332,7 +331,6 @@ public class BlazeCriteriaBuilderRenderer<T> {
 
         return result;
     }
-
 
     private void renderCTEs(QueryMetadata subQueryMetadata) {
         for (QueryFlag queryFlag : subQueryMetadata.getFlags()) {
@@ -960,6 +958,14 @@ public class BlazeCriteriaBuilderRenderer<T> {
                         cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
                         return;
                 }
+            }
+
+            // JPQLSerializer calls serialize transitively,
+            if (operator == Ops.EXISTS && args.get(0) instanceof SubQueryExpression) {
+                append("EXISTS (");
+                renderSubQueryExpression(args.get(0));
+                append(")");
+                return;
             }
 
             super.visitOperation(type, operator, args);

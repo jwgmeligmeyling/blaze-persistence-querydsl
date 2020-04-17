@@ -457,6 +457,23 @@ public class BasicQueryTest extends AbstractCoreTest {
     }
 
     @Test
+    public void testCteInSubquery() {
+        doInJPA(entityManager -> {
+            QIdHolderCte idHolderCte = QIdHolderCte.idHolderCte;
+            QBook book = QBook.book;
+
+            List<Book> fetch = new BlazeJPAQuery<>(entityManager, cbf)
+                    .select(book)
+                    .from(book)
+                    .innerJoin(selectFrom(idHolderCte)
+                                    .with(idHolderCte, idHolderCte.id, idHolderCte.name).as(select(book.id, book.name).from(book)),
+                            idHolderCte).on(idHolderCte.id.eq(book.id))
+                    .fetch();
+
+        });
+    }
+
+    @Test
     public void testMultipleInlineEntityWithLimitJoin() {
         doInJPA(entityManager -> {
             QRecursiveEntity t = new QRecursiveEntity("t");

@@ -2,13 +2,17 @@ package com.pallasathenagroup.querydsl;
 
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.support.SerializerBase;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.SubQueryExpression;
+import com.querydsl.jpa.JPQLOps;
 import com.querydsl.jpa.JPQLSerializer;
 import com.querydsl.jpa.JPQLTemplates;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import java.lang.reflect.Field;
+import java.util.List;
 
 /**
  * Slightly adjusted {@link JPQLSerializer} implementations that has
@@ -55,6 +59,22 @@ public class JPQLNextSerializer extends JPQLSerializer {
         // TODO: fix subqueries that require parens.
         serialize(query.getMetadata(), false, null);
         return null;
+    }
+
+    @Override
+    protected void visitOperation(Class<?> type, Operator operator, List<? extends Expression<?>> args) {
+        // JPQLSerializer replaces NUMCAST with CAST, which JPQL Next actually doesn't support
+        // JPQL Next has its own CAST functions however, so use these if they can be found instead.
+        if (operator == JPQLOps.CAST) {
+            try {
+                operator = JPQLNextOps.valueOf("CAST_" + type.getSimpleName().toUpperCase());
+                args = args.subList(0, 1);
+            } catch (IllegalArgumentException e) {
+                // no-op
+            }
+        }
+
+        super.visitOperation(type, operator, args);
     }
 
     /**

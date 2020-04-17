@@ -131,6 +131,8 @@ public class JPQLNextTemplates extends JPQLTemplates {
         add(JPQLNextOps.REPEAT, "REPEAT({0}, {1})");
 
         add(JPQLNextOps.BIND, "{0}");
+
+        add(Ops.XOR, "({0} AND NOT {1} OR (NOT {0} AND {1}))");
     }
 
 }
