@@ -126,8 +126,8 @@ public class JPQLNextTemplates extends JPQLTemplates {
         add(JPQLNextOps.TREAT_CALENDAR, "TREAT_CALENDAR({0})");
 
 
-        add(JPQLNextOps.LEAST, "LEAST({0})");
-        add(JPQLNextOps.GREATEST, "GREATEST({0})");
+        add(JPQLNextOps.LEAST, "LEAST({0}, {1})");
+        add(JPQLNextOps.GREATEST, "GREATEST({0}, {1})");
         add(JPQLNextOps.REPEAT, "REPEAT({0}, {1})");
 
         add(JPQLNextOps.BIND, "{0}");

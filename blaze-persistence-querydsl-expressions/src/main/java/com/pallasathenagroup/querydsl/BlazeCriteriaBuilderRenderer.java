@@ -34,6 +34,7 @@ import com.blazebit.persistence.SubqueryBuilder;
 import com.blazebit.persistence.SubqueryInitiator;
 import com.blazebit.persistence.WhereBuilder;
 import com.blazebit.persistence.WindowBuilder;
+import com.blazebit.persistence.WindowContainerBuilder;
 import com.blazebit.persistence.WindowFrameBetweenBuilder;
 import com.blazebit.persistence.WindowFrameBuilder;
 import com.blazebit.persistence.WindowFrameExclusionBuilder;
@@ -235,20 +236,17 @@ public class BlazeCriteriaBuilderRenderer<T> {
                 renderCTEs(subQueryMetadata);
 
                 criteriaBuilder = renderJoins(subQueryMetadata, (FromBaseBuilder) criteriaBuilder);
+                criteriaBuilder = renderNamedWindows(subQueryMetadata, (WindowContainerBuilder) criteriaBuilder);
                 renderDistinct(subQueryMetadata, (DistinctBuilder<?>) criteriaBuilder);
                 renderWhere(subQueryMetadata, (WhereBuilder<?>) criteriaBuilder);
                 renderGroupBy(subQueryMetadata, (GroupByBuilder<?>) criteriaBuilder);
                 renderHaving(subQueryMetadata, (HavingBuilder<?>) criteriaBuilder);
-                renderOrderBy(subQueryMetadata, (OrderByBuilder<?>) criteriaBuilder);
-                renderParameters(subQueryMetadata, (ParameterHolder<?>) criteriaBuilder);
-                renderConstants((ParameterHolder<?>) criteriaBuilder);
-                renderModifiers(subQueryMetadata.getModifiers(), (LimitBuilder<?>) criteriaBuilder);
 
                 Expression<?> select = subQueryMetadata.getProjection();
                 if (select instanceof FactoryExpression<?> && criteriaBuilder instanceof FullQueryBuilder<?, ?>) {
                     FactoryExpression<T> factoryExpression = (FactoryExpression<T>) select;
                     FullQueryBuilder<?, ?> fullQueryBuilder = (FullQueryBuilder<?, ?>) criteriaBuilder;
-                    fullQueryBuilder.selectNew(new FactoryExpressionObjectBuilder(factoryExpression));
+                    criteriaBuilder = fullQueryBuilder.selectNew(new FactoryExpressionObjectBuilder(factoryExpression));
 
                 } else {
                     List<? extends Expression<?>> projection = expandProjection(subQueryMetadata.getProjection());
@@ -307,6 +305,10 @@ public class BlazeCriteriaBuilderRenderer<T> {
                     }
                 }
 
+                renderOrderBy(subQueryMetadata, (OrderByBuilder<?>) criteriaBuilder);
+                renderParameters(subQueryMetadata, (ParameterHolder<?>) criteriaBuilder);
+                renderConstants((ParameterHolder<?>) criteriaBuilder);
+                renderModifiers(subQueryMetadata.getModifiers(), (LimitBuilder<?>) criteriaBuilder);
                 return criteriaBuilder;
             }
 
@@ -340,16 +342,26 @@ public class BlazeCriteriaBuilderRenderer<T> {
                 case WITH:
                     flag.accept(serializer, null);
                     break;
-                case AFTER_HAVING:
-                    renderWindowFlag(queryFlag);
-                    break;
             }
         }
     }
 
-    private void renderWindowFlag(QueryFlag queryFlag) {
+    private <T extends WindowContainerBuilder<T>> T renderNamedWindows(QueryMetadata subQueryMetadata, T windowContainerBuilder) {
+        for (QueryFlag queryFlag : subQueryMetadata.getFlags()) {
+            Expression<?> flag = queryFlag.getFlag();
+            Position position = queryFlag.getPosition();
+            switch (position) {
+                case AFTER_HAVING:
+                    windowContainerBuilder = renderWindowFlag(queryFlag, windowContainerBuilder);
+                    break;
+            }
+        }
+        return windowContainerBuilder;
+    }
+
+    private <T extends WindowContainerBuilder<T>> T renderWindowFlag(QueryFlag queryFlag, WindowContainerBuilder<T> windowContainerBuilder) {
         NamedWindow namedWindow = (NamedWindow) queryFlag.getFlag();
-        WindowBuilder<CriteriaBuilder<T>> window = criteriaBuilder.window(namedWindow.getAlias());
+        WindowBuilder<T> window = windowContainerBuilder.window(namedWindow.getAlias());
 
         for (Expression<?> expression : namedWindow.getPartitionBy()) {
             window.partitionBy(renderExpression(expression));
@@ -360,14 +372,14 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
 
         if (namedWindow.getFrameMode() != null) {
-            WindowFrameBuilder<CriteriaBuilder<T>> windowFrameBuilder = namedWindow.getFrameMode().equals(WindowFrameMode.RANGE) ?
+            WindowFrameBuilder<T> windowFrameBuilder = namedWindow.getFrameMode().equals(WindowFrameMode.RANGE) ?
                     window.range() : namedWindow.getFrameMode().equals(WindowFrameMode.ROWS) ?
                     window.rows() : window.groups();
 
-            WindowFrameExclusionBuilder<CriteriaBuilder<T>> frameExclusionBuilder = null;
+            WindowFrameExclusionBuilder<T> frameExclusionBuilder = null;
 
             if (namedWindow.getFrameEndType() != null) {
-                WindowFrameBetweenBuilder<CriteriaBuilder<T>> betweenBuilder = null;
+                WindowFrameBetweenBuilder<T> betweenBuilder = null;
                 switch (namedWindow.getFrameStartType()) {
                     case UNBOUNDED_PRECEDING:
                         betweenBuilder = windowFrameBuilder.betweenUnboundedPreceding();
@@ -378,9 +390,15 @@ public class BlazeCriteriaBuilderRenderer<T> {
                     case CURRENT_ROW:
                         betweenBuilder = windowFrameBuilder.betweenCurrentRow();
                         break;
+                    case BOUNDED_FOLLOWING:
+                        betweenBuilder = windowFrameBuilder.betweenFollowing(renderExpression(namedWindow.getFrameStartExpression()));
+                        break;
                 }
 
                 switch (namedWindow.getFrameEndType()) {
+                    case BOUNDED_PRECEDING:
+                        frameExclusionBuilder = betweenBuilder.andPreceding(renderExpression(namedWindow.getFrameEndExpression()));
+                        break;
                     case CURRENT_ROW:
                         frameExclusionBuilder = betweenBuilder.andCurrentRow();
                         break;
@@ -405,9 +423,9 @@ public class BlazeCriteriaBuilderRenderer<T> {
                 }
             }
 
-            frameExclusionBuilder.end();
+            return frameExclusionBuilder.end();
         } else {
-            window.end();
+            return window.end();
         }
     }
 

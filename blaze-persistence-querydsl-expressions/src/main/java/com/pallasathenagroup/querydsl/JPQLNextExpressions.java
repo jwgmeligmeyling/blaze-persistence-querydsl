@@ -5,6 +5,7 @@ import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.dsl.ComparableExpression;
@@ -703,6 +704,32 @@ public class JPQLNextExpressions {
     public static <T> WindowOver<T> lastValue(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LAST_VALUE, expr);
     }
+
+    public static <T extends Comparable<? super T>> Expression<T> greatest(T a, Expression<T> b) {
+        return greatest(Expressions.constant(a), b);
+    }
+
+    public static <T extends Comparable<? super T>> Expression<T> greatest(Expression<T> a, T b) {
+        return greatest(a, Expressions.constant(b));
+    }
+
+
+    public static <T extends Comparable<? super T>> Expression<T> greatest(Expression<T> a, Expression<T> b) {
+        return Expressions.operation(a.getType(), JPQLNextOps.GREATEST, a, b);
+    }
+
+    public static <T extends Comparable<? super T>> Expression<T> least(T a, Expression<T> b) {
+        return least(Expressions.constant(a), b);
+    }
+
+    public static <T extends Comparable<? super T>> Expression<T> least(Expression<T> a, T b) {
+        return least(a, Expressions.constant(b));
+    }
+
+    public static <T extends Comparable<? super T>> Expression<T> least(Expression<T> a, Expression<T> b) {
+        return Expressions.operation(a.getType(), JPQLNextOps.LEAST, a, b);
+    }
+
 
     public static <T> Expression<T> cast(Class<T> result, Expression<?> expression) {
         if (Boolean.class.equals(result) || boolean.class.equals(result)) {
