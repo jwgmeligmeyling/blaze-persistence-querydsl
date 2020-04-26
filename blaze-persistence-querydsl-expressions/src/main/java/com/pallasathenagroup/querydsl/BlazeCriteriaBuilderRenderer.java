@@ -2,6 +2,7 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.BaseOngoingFinalSetOperationBuilder;
 import com.blazebit.persistence.BaseOngoingSetOperationBuilder;
+import com.blazebit.persistence.BaseSubqueryBuilder;
 import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.blazebit.persistence.DistinctBuilder;
@@ -544,7 +545,20 @@ public class BlazeCriteriaBuilderRenderer<T> {
                                 }
                             }
                         }
-                        criteriaBuilder = fromBuilder.from(entityPath.getType(), alias);
+
+                        if (entityJoin) {
+                            criteriaBuilder = fromBuilder.from(entityPath.getType(), alias);
+                        } else {
+                            String collectionExpression = renderExpression(entityPath);
+                            if (fromBuilder instanceof BaseSubqueryBuilder) {
+                                criteriaBuilder = (X) ((BaseSubqueryBuilder<?>) fromBuilder).from(collectionExpression, alias);
+                            } else if (fromBuilder instanceof SubqueryInitiator<?>) {
+                                criteriaBuilder = (X) ((SubqueryInitiator<?>) fromBuilder).from(collectionExpression, alias);
+                            } else {
+                                throw new IllegalArgumentException(collectionExpression + "  join not supported here");
+                            }
+                        }
+
                         break;
                     default:
                         JoinType joinType = getJoinType(joinExpression);
