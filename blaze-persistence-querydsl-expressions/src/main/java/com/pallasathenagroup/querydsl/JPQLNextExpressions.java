@@ -5,9 +5,9 @@ import com.querydsl.core.types.CollectionExpression;
 import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.ComparableExpression;
 import com.querydsl.core.types.dsl.DateExpression;
 import com.querydsl.core.types.dsl.DateTimeExpression;
@@ -19,7 +19,6 @@ import com.querydsl.jpa.JPQLOps;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.temporal.ChronoUnit;
@@ -884,6 +883,44 @@ public class JPQLNextExpressions {
     }
 
 
+    public static <T> Expression<T> groupConcat(Expression<T> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
+        return groupConcat(false, expression, ConstantImpl.create(separator), orderSpecifiers);
+    }
+
+    public static <T> Expression<T> groupConcat(Expression<T> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
+        return groupConcat(false, expression, separator, orderSpecifiers);
+    }
+
+    public static <T> Expression<T> groupConcat(boolean distinct, Expression<T> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
+        return groupConcat(distinct, expression, ConstantImpl.create(separator), orderSpecifiers);
+    }
+
+    public static <T> Expression<T> groupConcat(boolean distinct, Expression<T> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
+        StringBuilder template = new StringBuilder();
+        Expression<?>[] arguments = new Expression[2+orderSpecifiers.length*2];
+        arguments[0] = expression;
+        arguments[1] = separator;
+
+        template.append("GROUP_CONCAT(");
+        if (distinct) {
+            template.append("'DISTINCT', ");
+        }
+        template.append("{0}, 'SEPARATOR', '{1s}'"); // {1s}?
+
+        for (int i = 0; i < orderSpecifiers.length; i++) {
+            if (i == 0) template.append(", 'ORDER BY");
+            OrderSpecifier<?> orderSpecifier = orderSpecifiers[i];
+            int expressionIndex = i*2 + 2;
+            int orderIndex = expressionIndex + 1;
+            template.append(", {").append(expressionIndex).append("}, {").append(orderIndex).append("s}");
+            arguments[expressionIndex] = orderSpecifier.getTarget();
+            arguments[orderIndex] = ConstantImpl.create(orderSpecifier.getOrder().name());
+        }
+
+        template.append(")");
+        return Expressions.template(expression.getType(), template.toString(), arguments);
+    }
+
     public static <T> Expression<T> cast(Class<T> result, Expression<?> expression) {
         if (Boolean.class.equals(result) || boolean.class.equals(result)) {
             return Expressions.simpleOperation(result, JPQLNextOps.CAST_BOOLEAN, expression);
@@ -955,4 +992,5 @@ public class JPQLNextExpressions {
             throw new IllegalArgumentException("No cast operation for " + result.getName());
         }
     }
+
 }
