@@ -474,6 +474,149 @@ public class JPQLNextExpressions {
     }
 
     /**
+     * Add the given amount of years to the date
+     *
+     * @param date datetime
+     * @param years years to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addYears(DateTimeExpression<D> date, Expression<Integer> years) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_YEARS, date, years);
+    }
+
+    /**
+     * Add the given amount of months to the date
+     *
+     * @param date datetime
+     * @param months months to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addMonths(DateTimeExpression<D> date, Expression<Integer> months) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_MONTHS, date, months);
+    }
+
+    /**
+     * Add the given amount of weeks to the date
+     *
+     * @param date datetime
+     * @param weeks weeks to add
+     * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addWeeks(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addWeeks(DateTimeExpression<D> date, Expression<Integer> weeks) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_WEEKS, date, weeks);
+    }
+
+    /**
+     * Add the given amount of days to the date
+     *
+     * @param date datetime
+     * @param days days to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addDays(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addDays(DateTimeExpression<D> date, Expression<Integer> days) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_DAYS, date, days);
+    }
+
+    /**
+     * Add the given amount of hours to the date
+     *
+     * @param date datetime
+     * @param hours hours to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addHours(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addHours(DateTimeExpression<D> date, Expression<Integer> hours) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_HOURS, date, hours);
+    }
+
+    /**
+     * Add the given amount of minutes to the date
+     *
+     * @param date datetime
+     * @param minutes minutes to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addMinutes(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addMinutes(DateTimeExpression<D> date, Expression<Integer> minutes) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_MINUTES, date, minutes);
+    }
+
+    /**
+     * Add the given amount of seconds to the date
+     *
+     * @param date datetime
+     * @param seconds seconds to add
+     * @return converted datetime
+     * @see com.querydsl.sql.SQLExpressions#addSeconds(DateTimeExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateTimeExpression<D> addSeconds(DateTimeExpression<D> date, Expression<Integer> seconds) {
+        return Expressions.dateTimeOperation(date.getType(), Ops.DateTimeOps.ADD_SECONDS, date, seconds);
+    }
+
+    /**
+     * Add the given amount of years to the date
+     *
+     * @param date date
+     * @param years years to add
+     * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateExpression<D> addYears(DateExpression<D> date, Expression<Integer> years) {
+        return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_YEARS, date, years);
+    }
+
+    /**
+     * Add the given amount of months to the date
+     *
+     * @param date date
+     * @param months months to add
+     * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addMonths(DateExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateExpression<D> addMonths(DateExpression<D> date, Expression<Integer> months) {
+        return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_MONTHS, date, months);
+    }
+
+    /**
+     * Add the given amount of weeks to the date
+     *
+     * @param date date
+     * @param weeks weeks to add
+     * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addWeeks(DateExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateExpression<D> addWeeks(DateExpression<D> date, Expression<Integer> weeks) {
+        return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_WEEKS, date, weeks);
+    }
+
+    /**
+     * Add the given amount of days to the date
+     *
+     * @param date date
+     * @param days days to add
+     * @return converted date
+     * @see com.querydsl.sql.SQLExpressions#addDays(DateExpression, int)
+     * @since 1.0
+     */
+    public static <D extends Comparable<?>> DateExpression<D> addDays(DateExpression<D> date, Expression<Integer> days) {
+        return Expressions.dateOperation(date.getType(), Ops.DateTimeOps.ADD_DAYS, date, days);
+    }
+
+    /**
      * Start a window function expression
      *
      * @param expr expression
