@@ -874,6 +874,16 @@ public class JPQLNextExpressions {
     }
 
 
+    public static <T extends Comparable<? super T>> Expression<T> literal(Class<T> clasz, T value) {
+        return (Expression) Expressions.template(clasz, JPQLNextTemplates.DEFAULT.asLiteral(value));
+    }
+
+
+    public static <T extends Comparable<? super T>> Expression<T> literal(T value) {
+        return (Expression) Expressions.template(value.getClass(), JPQLNextTemplates.DEFAULT.asLiteral(value));
+    }
+
+
     public static <T> Expression<T> cast(Class<T> result, Expression<?> expression) {
         if (Boolean.class.equals(result) || boolean.class.equals(result)) {
             return Expressions.simpleOperation(result, JPQLNextOps.CAST_BOOLEAN, expression);

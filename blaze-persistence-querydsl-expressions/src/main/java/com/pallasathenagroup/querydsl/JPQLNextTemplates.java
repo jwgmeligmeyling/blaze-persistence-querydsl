@@ -1,5 +1,7 @@
 package com.pallasathenagroup.querydsl;
 
+import com.blazebit.persistence.parser.util.TypeConverter;
+import com.blazebit.persistence.parser.util.TypeUtils;
 import com.querydsl.core.types.Ops;
 import com.querydsl.jpa.DefaultQueryHandler;
 import com.querydsl.jpa.JPQLTemplates;
@@ -133,6 +135,16 @@ public class JPQLNextTemplates extends JPQLTemplates {
         add(JPQLNextOps.BIND, "{0}");
 
         add(Ops.XOR, "({0} AND NOT {1} OR (NOT {0} AND {1}))");
+
+    }
+
+    @Override
+    public String asLiteral(Object constant) {
+        TypeConverter converter = TypeUtils.getConverter(constant.getClass());
+        if (converter != null) {
+            return converter.toString(constant);
+        }
+        return super.asLiteral(constant);
     }
 
 }
