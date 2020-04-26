@@ -136,6 +136,24 @@ public class JPQLNextTemplates extends JPQLTemplates {
 
         add(Ops.XOR, "({0} AND NOT {1} OR (NOT {0} AND {1}))");
 
+        add(JPQLNextOps.WINDOW_NAME, "WINDOW {0s} AS ({1})");
+        add(JPQLNextOps.WINDOW_BASE, "{0s}");
+        add(JPQLNextOps.WINDOW_ORDER_BY, "ORDER BY {0}");
+        add(JPQLNextOps.WINDOW_PARTITION_BY, "PARTITION BY {0}");
+        add(JPQLNextOps.WINDOW_ROWS, "ROWS {0}");
+        add(JPQLNextOps.WINDOW_RANGE, "RANGE {0}");
+        add(JPQLNextOps.WINDOW_GROUPS, "GROUPS {0}");
+        add(JPQLNextOps.WINDOW_BETWEEN, "BETWEEN {0} AND {1}");
+        add(JPQLNextOps.WINDOW_UNBOUNDED_PRECEDING, "UNBOUNDED PRECEDING");
+        add(JPQLNextOps.WINDOW_PRECEDING, "{0} PRECEDING");
+        add(JPQLNextOps.WINDOW_FOLLOWING, "{0} FOLLOWING");
+        add(JPQLNextOps.WINDOW_UNBOUNDED_FOLLOWING, "UNBOUNDED FOLLOWING");
+        add(JPQLNextOps.WINDOW_CURRENT_ROW, "CURRENT ROW");
+        add(JPQLNextOps.WINDOW_DEFINITION_1, "{0}");
+        add(JPQLNextOps.WINDOW_DEFINITION_2, "{0} {1}");
+        add(JPQLNextOps.WINDOW_DEFINITION_3, "{0} {1} {2}");
+        add(JPQLNextOps.WINDOW_DEFINITION_4, "{0} {1} {2} {3}");
+
     }
 
     @Override

@@ -40,7 +40,6 @@ import com.blazebit.persistence.WindowFrameBetweenBuilder;
 import com.blazebit.persistence.WindowFrameBuilder;
 import com.blazebit.persistence.WindowFrameExclusionBuilder;
 import com.blazebit.persistence.parser.EntityMetamodel;
-import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.util.JpaMetamodelUtils;
 import com.blazebit.persistence.spi.ExtendedAttribute;
 import com.blazebit.persistence.spi.ExtendedManagedType;
@@ -50,12 +49,12 @@ import com.querydsl.core.QueryFlag.Position;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.QueryModifiers;
 import com.querydsl.core.types.Constant;
-import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.FactoryExpression;
 import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.Operator;
 import com.querydsl.core.types.Ops;
+import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.Path;
@@ -360,74 +359,8 @@ public class BlazeCriteriaBuilderRenderer<T> {
         return windowContainerBuilder;
     }
 
-    private <T extends WindowContainerBuilder<T>> T renderWindowFlag(QueryFlag queryFlag, WindowContainerBuilder<T> windowContainerBuilder) {
-        NamedWindow namedWindow = (NamedWindow) queryFlag.getFlag();
-        WindowBuilder<T> window = windowContainerBuilder.window(namedWindow.getAlias());
-
-        for (Expression<?> expression : namedWindow.getPartitionBy()) {
-            window.partitionBy(renderExpression(expression));
-        }
-
-        for (OrderSpecifier<?> orderSpecifier : namedWindow.getOrderBy()) {
-            renderOrderSpecifier(orderSpecifier, window);
-        }
-
-        if (namedWindow.getFrameMode() != null) {
-            WindowFrameBuilder<T> windowFrameBuilder = namedWindow.getFrameMode().equals(WindowFrameMode.RANGE) ?
-                    window.range() : namedWindow.getFrameMode().equals(WindowFrameMode.ROWS) ?
-                    window.rows() : window.groups();
-
-            WindowFrameExclusionBuilder<T> frameExclusionBuilder = null;
-
-            if (namedWindow.getFrameEndType() != null) {
-                WindowFrameBetweenBuilder<T> betweenBuilder = null;
-                switch (namedWindow.getFrameStartType()) {
-                    case UNBOUNDED_PRECEDING:
-                        betweenBuilder = windowFrameBuilder.betweenUnboundedPreceding();
-                        break;
-                    case BOUNDED_PRECEDING:
-                        betweenBuilder = windowFrameBuilder.betweenPreceding(renderExpression(namedWindow.getFrameStartExpression()));
-                        break;
-                    case CURRENT_ROW:
-                        betweenBuilder = windowFrameBuilder.betweenCurrentRow();
-                        break;
-                    case BOUNDED_FOLLOWING:
-                        betweenBuilder = windowFrameBuilder.betweenFollowing(renderExpression(namedWindow.getFrameStartExpression()));
-                        break;
-                }
-
-                switch (namedWindow.getFrameEndType()) {
-                    case BOUNDED_PRECEDING:
-                        frameExclusionBuilder = betweenBuilder.andPreceding(renderExpression(namedWindow.getFrameEndExpression()));
-                        break;
-                    case CURRENT_ROW:
-                        frameExclusionBuilder = betweenBuilder.andCurrentRow();
-                        break;
-                    case UNBOUNDED_FOLLOWING:
-                        frameExclusionBuilder = betweenBuilder.andUnboundedFollowing();
-                        break;
-                    case BOUNDED_FOLLOWING:
-                        frameExclusionBuilder = betweenBuilder.andFollowing(renderExpression(namedWindow.getFrameEndExpression()));
-                        break;
-                }
-            } else {
-                switch (namedWindow.getFrameStartType()) {
-                    case UNBOUNDED_PRECEDING:
-                        frameExclusionBuilder = windowFrameBuilder.unboundedPreceding();
-                        break;
-                    case BOUNDED_PRECEDING:
-                        frameExclusionBuilder = windowFrameBuilder.preceding(renderExpression(namedWindow.getFrameStartExpression()));
-                        break;
-                    case CURRENT_ROW:
-                        frameExclusionBuilder = windowFrameBuilder.currentRow();
-                        break;
-                }
-            }
-
-            return frameExclusionBuilder.end();
-        } else {
-            return window.end();
-        }
+    private <X extends WindowContainerBuilder<X>> X renderWindowFlag(QueryFlag queryFlag, WindowContainerBuilder<X> windowContainerBuilder) {
+        return queryFlag.getFlag().accept(new WindowContainerBuilderDefaultVisitorImpl<X>(windowContainerBuilder), null);
     }
 
     private void renderModifiers(QueryModifiers modifiers, LimitBuilder<?> criteriaBuilder) {
@@ -1027,5 +960,148 @@ public class BlazeCriteriaBuilderRenderer<T> {
             return super.visit(expr, context);
         }
 
+    }
+
+    private class WindowContainerBuilderDefaultVisitorImpl<X extends WindowContainerBuilder<X>> extends DefaultVisitorImpl<X, Object> {
+        private final WindowContainerBuilder<X> windowContainerBuilder;
+        WindowBuilder<X> window;
+        WindowFrameBuilder<X> rows;
+        boolean between;
+        boolean frameStartMode;
+        WindowFrameBetweenBuilder<X> windowFrameBetweenBuilder;
+        WindowFrameExclusionBuilder<X> windowFrameExclusionBuilder;
+
+        public WindowContainerBuilderDefaultVisitorImpl(WindowContainerBuilder<X> windowContainerBuilder) {
+            this.windowContainerBuilder = windowContainerBuilder;
+            between = false;
+            frameStartMode = true;
+        }
+
+        @Override
+        public X visit(Operation<?> operation, Object o) {
+            List<Expression<?>> arguments = operation.getArgs();
+            if (operation.getOperator() instanceof JPQLNextOps) {
+                switch ((JPQLNextOps) operation.getOperator()) {
+                    case WINDOW_NAME:
+                        window = windowContainerBuilder.window(((Constant) arguments.get(0)).getConstant().toString());
+                        arguments.get(1).accept(this, o);
+                        break;
+                    case WINDOW_BASE:
+                        throw new UnsupportedOperationException("Named window extension is not supported in WindowContainerBuilder");
+                    case WINDOW_ORDER_BY:
+                        operation.getArgs().get(0).accept(new DefaultVisitorImpl<Object, Object>() {
+                            @Override
+                            public Object visit(Operation<?> operation, Object o) {
+                                if (operation.getOperator() == Ops.LIST) {
+                                    operation.getArg(0).accept(this, null);
+                                    operation.getArg(1).accept(this, null);
+                                    return null;
+                                } else {
+                                    throw new UnsupportedOperationException();
+                                }
+                            }
+
+                            @Override
+                            public Object visit(TemplateExpression<?> templateExpression, Object o) {
+                                String nullRendering = templateExpression.getArgs().get(2).toString();
+                                if (nullRendering.equals("")) {
+                                    window = window.orderBy(renderExpression((Expression) templateExpression.getArg(0)), templateExpression.getArg(1).equals(Order.ASC));
+                                } else if (nullRendering.equals("NULLS FIRST")){
+                                    window = window.orderBy(renderExpression((Expression) templateExpression.getArg(0)), templateExpression.getArg(1).equals(Order.ASC), true);
+                                } else {
+                                    window = window.orderBy(renderExpression((Expression) templateExpression.getArg(0)), templateExpression.getArg(1).equals(Order.ASC), false);
+                                }
+                                return null;
+                            }
+                        }, null);
+                        break;
+                    case WINDOW_PARTITION_BY:
+                        window = window.partitionBy(renderExpression(arguments.get(0)));
+                        break;
+                    case WINDOW_ROWS:
+                        rows = window.rows();
+                        arguments.get(0).accept(this, o);
+                        break;
+                    case WINDOW_RANGE:
+                        rows = window.range();
+                        arguments.get(0).accept(this, o);
+                        break;
+                    case WINDOW_GROUPS:
+                        rows = window.groups();
+                        arguments.get(0).accept(this, o);
+                        break;
+                    case WINDOW_BETWEEN:
+                        between = true;
+                        arguments.get(0).accept(this, o);
+                        arguments.get(1).accept(this, o);
+                        break;
+                    case WINDOW_UNBOUNDED_PRECEDING:
+                        assert frameStartMode;
+                        assert rows != null;
+                        if (between) {
+                            windowFrameBetweenBuilder = rows.betweenUnboundedPreceding();
+                        } else {
+                            windowFrameExclusionBuilder = rows.unboundedPreceding();
+                        }
+                        frameStartMode = false;
+                        break;
+                    case WINDOW_PRECEDING:
+                        if (frameStartMode) {
+                            assert rows != null;
+                            if (between) {
+                                windowFrameBetweenBuilder = rows.betweenPreceding(renderExpression(arguments.get(0)));
+                            } else {
+                                windowFrameExclusionBuilder = rows.preceding(renderExpression(arguments.get(0)));
+                            }
+                            frameStartMode = false;
+                        } else {
+                            windowFrameExclusionBuilder = windowFrameBetweenBuilder.andPreceding(renderExpression(arguments.get(0)));
+                        }
+                        arguments.get(0).accept(this, o);
+                        break;
+                    case WINDOW_FOLLOWING:
+                        if (frameStartMode) {
+                            assert between;
+                            assert rows != null;
+                            windowFrameBetweenBuilder = rows.betweenFollowing(renderExpression(arguments.get(0)));
+                            frameStartMode = false;
+                        } else {
+                            windowFrameExclusionBuilder = windowFrameBetweenBuilder.andFollowing(renderExpression(arguments.get(0)));
+                        }
+                        arguments.get(0).accept(this, o);
+                        break;
+                    case WINDOW_UNBOUNDED_FOLLOWING:
+                        assert !frameStartMode;
+                        windowFrameExclusionBuilder = windowFrameBetweenBuilder.andUnboundedFollowing();
+                        break;
+                    case WINDOW_CURRENT_ROW:
+                        if (frameStartMode) {
+                            assert rows != null;
+                            if (between) {
+                                windowFrameBetweenBuilder = rows.betweenCurrentRow();
+                            } else {
+                                windowFrameExclusionBuilder = rows.currentRow();
+                            }
+                            frameStartMode = false;
+                        } else {
+                            windowFrameExclusionBuilder = windowFrameBetweenBuilder.andCurrentRow();
+                        }
+                        break;
+                    case WINDOW_DEFINITION_1:
+                    case WINDOW_DEFINITION_2:
+                    case WINDOW_DEFINITION_3:
+                    case WINDOW_DEFINITION_4:
+                        for (Expression<?> argument : arguments) {
+                            argument.accept(this, o);
+                        }
+                        if (windowFrameExclusionBuilder != null) {
+                            return windowFrameExclusionBuilder.end();
+                        } else {
+                            return window.end();
+                        }
+                }
+            }
+            return (X) windowContainerBuilder;
+        }
     }
 }

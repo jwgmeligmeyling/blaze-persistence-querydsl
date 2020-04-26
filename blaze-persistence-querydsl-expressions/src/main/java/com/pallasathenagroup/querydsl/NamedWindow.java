@@ -38,7 +38,11 @@ public class NamedWindow extends WindowDefinition<NamedWindow, Void> {
 
     @Override
     public Expression<Void> getValue() {
-        return Expressions.template(super.getType(), "WINDOW " + alias + " AS ({0})", super.getValue());
+        return Expressions.template(super.getType(), alias);
+    }
+
+    public Expression<Void> getWindowDefinition() {
+        return Expressions.operation(getType(), JPQLNextOps.WINDOW_NAME, Expressions.constant(alias), super.getValue());
     }
 
     @Override

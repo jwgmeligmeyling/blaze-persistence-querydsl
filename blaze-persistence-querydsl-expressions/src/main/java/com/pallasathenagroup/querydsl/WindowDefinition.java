@@ -3,19 +3,29 @@ package com.pallasathenagroup.querydsl;
 import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.expression.WindowFramePositionType;
 import com.google.common.collect.ImmutableList;
+import com.querydsl.core.types.Constant;
+import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.MutableExpressionBase;
+import com.querydsl.core.types.Operation;
+import com.querydsl.core.types.Operator;
+import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Visitor;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.SimpleExpression;
+import com.querydsl.core.types.dsl.SimpleOperation;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.blazebit.persistence.parser.expression.WindowFrameMode.GROUPS;
 import static com.blazebit.persistence.parser.expression.WindowFrameMode.RANGE;
@@ -42,7 +52,7 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
     private final List<Expression<?>> partitionBy = new ArrayList<Expression<?>>();
 
     @Nullable
-    private transient volatile SimpleExpression<T> value;
+    private transient volatile SimpleExpression value;
 
     private String baseWindowName;
     private WindowFrameMode frameMode;
@@ -95,109 +105,101 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
      */
     public Expression<T> getValue() {
         if (value == null) {
-            int size = 0;
-            ImmutableList.Builder<Expression<?>> args = ImmutableList.builder();
-            StringBuilder builder = new StringBuilder();
+            Optional<Expression> baseWindow = Optional.ofNullable(baseWindowName)
+                    .map(name -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_BASE, Expressions.constant(baseWindowName)));
 
-            if (baseWindowName != null) {
-                builder.append(baseWindowName).append(" ");
-            }
+            Optional<SimpleOperation<Object>> partitionByOperation = partitionBy.stream()
+                    .reduce((a, b) -> Expressions.operation(a.getType(), Ops.LIST, a, b))
+                    .map(a -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_PARTITION_BY, a));
 
-            if (!partitionBy.isEmpty()) {
-                builder.append(PARTITION_BY);
-                boolean first = true;
+            Optional<SimpleOperation<Object>> orderByOperation = orderBy.stream()
+                    .map(orderSpecifier -> (Expression) Expressions.template(
+                            Object.class,
+                            "{0} {1s} {2s}",
+                            orderSpecifier.getTarget(),
+                            orderSpecifier.getOrder(),
+                            orderSpecifier.getNullHandling() != null && orderSpecifier.getNullHandling() != OrderSpecifier.NullHandling.Default ? orderSpecifier.getNullHandling() == OrderSpecifier.NullHandling.NullsFirst ? "NULLS FIRST" : "NULLS LAST" : ""
+                    ))
+                    .reduce((a, b) -> Expressions.operation(Object.class, Ops.LIST, a, b))
+                    .map(a -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_ORDER_BY, a));
 
+            Optional<Operation> frameClauseOperation;
 
-                for (Expression<?> expr : partitionBy) {
-                    if (!first) {
-                        builder.append(", ");
-                    }
-                    builder.append("{").append(size).append("}");
-                    args.add(expr);
-                    size++;
-                    first = false;
+            if (frameMode != null) {
+                Operator frameOperator;
+                switch (frameMode) {
+                    case RANGE:
+                        frameOperator = JPQLNextOps.WINDOW_RANGE;
+                        break;
+                    case ROWS:
+                        frameOperator = JPQLNextOps.WINDOW_ROWS;
+                        break;
+                    case GROUPS:
+                        frameOperator = JPQLNextOps.WINDOW_GROUPS;
+                        break;
+                    default: throw new UnsupportedOperationException();
                 }
 
-            }
-            if (!orderBy.isEmpty()) {
-                if (!partitionBy.isEmpty()) {
-                    builder.append(" ");
-                }
-                builder.append(ORDER_BY);
-                builder.append("{").append(size).append("}");
-                args.add(ExpressionUtils.orderBy(orderBy));
-                size++;
-            }
+                Operation rangeClause;
+                Operator frameStartOperator = getOperatorForWindowFramePositionType(this.frameStartType);
+                Operation frameStart = rangeClause = frameStartExpression != null ?
+                        Expressions.operation(Object.class, frameStartOperator, frameStartExpression) :
+                        Expressions.operation(Object.class, frameStartOperator);
 
-
-            if (frameStartType != null) {
                 if (frameEndType != null) {
-                    builder.append(" between ");
+                    Operator frameEndOperator = getOperatorForWindowFramePositionType(this.frameEndType);
+                    Operation frameEnd = frameEndExpression != null ?
+                            Expressions.operation(Object.class, frameEndOperator, frameEndExpression) :
+                            Expressions.operation(Object.class, frameEndOperator);
 
-                    switch (frameStartType) {
-                        case UNBOUNDED_PRECEDING:
-                        case CURRENT_ROW:
-                        case UNBOUNDED_FOLLOWING:
-                            builder.append(frameStartType.toString().replace("_", " ").toLowerCase());
-                            break;
-                        case BOUNDED_PRECEDING:
-                            builder.append("preceding {").append(size).append("}");
-                            args.add(frameStartExpression);
-                            size++;
-                            break;
-                        case BOUNDED_FOLLOWING:
-                            builder.append("following {").append(size).append("}");
-                            args.add(frameStartExpression);
-
-                            size++;
-                            break;
-                    }
-
-                    builder.append(" and ");
-
-
-                    switch (frameEndType) {
-                        case UNBOUNDED_PRECEDING:
-                        case CURRENT_ROW:
-                        case UNBOUNDED_FOLLOWING:
-                            builder.append(frameEndType.toString().replace("_", " ").toLowerCase());
-                            break;
-                        case BOUNDED_PRECEDING:
-                            builder.append("preceding {").append(size).append("}");
-                            args.add(frameEndExpression);
-                            size++;
-                            break;
-                        case BOUNDED_FOLLOWING:
-                            builder.append("following {").append(size).append("}");
-                            args.add(frameEndExpression);
-                            size++;
-                            break;
-                    }
-                } else {
-                    switch (frameStartType) {
-                        case UNBOUNDED_PRECEDING:
-                        case CURRENT_ROW:
-                        case UNBOUNDED_FOLLOWING:
-                            builder.append(frameStartType.toString().replace("_", " ").toLowerCase());
-                            break;
-                        case BOUNDED_PRECEDING:
-                            builder.append("preceding {").append(size).append("}");
-                            args.add(frameStartExpression);
-                            size++;
-                            break;
-                        case BOUNDED_FOLLOWING:
-                            builder.append("following {").append(size).append("}");
-                            args.add(frameStartExpression);
-
-                            size++;
-                            break;
-                    }
+                    rangeClause = Expressions.operation(Object.class, JPQLNextOps.WINDOW_BETWEEN, frameStart, frameEnd);
                 }
+
+                frameClauseOperation = Optional.of(Expressions.operation(Object.class, frameOperator, rangeClause));
+            } else {
+                frameClauseOperation = Optional.empty();
             }
 
-            value = Expressions.template(getType(), builder.toString(), (List<Expression<?>>) args.build());
+            List<? extends Expression> arguments = Stream.of(baseWindow, partitionByOperation, orderByOperation, frameClauseOperation)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toList());
+
+            Operator windowOperator;
+
+            switch (arguments.size()) {
+                case 1: windowOperator = JPQLNextOps.WINDOW_DEFINITION_1; break;
+                case 2: windowOperator = JPQLNextOps.WINDOW_DEFINITION_2; break;
+                case 3: windowOperator = JPQLNextOps.WINDOW_DEFINITION_3; break;
+                case 4: windowOperator = JPQLNextOps.WINDOW_DEFINITION_4; break;
+                default: throw new UnsupportedOperationException();
+            }
+
+            value = Expressions.operation(Object.class, windowOperator, arguments.toArray(new Expression[0]));
         }
         return value;
+    }
+
+    private Operator getOperatorForWindowFramePositionType(WindowFramePositionType frameStartType) {
+        Operator frameStartOperator = null;
+        switch (frameStartType) {
+            case UNBOUNDED_PRECEDING:
+                frameStartOperator = JPQLNextOps.WINDOW_UNBOUNDED_PRECEDING;
+                break;
+            case BOUNDED_PRECEDING:
+                frameStartOperator = JPQLNextOps.WINDOW_PRECEDING;
+                break;
+            case CURRENT_ROW:
+                frameStartOperator = JPQLNextOps.WINDOW_CURRENT_ROW;
+                break;
+            case UNBOUNDED_FOLLOWING:
+                frameStartOperator = JPQLNextOps.WINDOW_UNBOUNDED_FOLLOWING;
+                break;
+            case BOUNDED_FOLLOWING:
+                frameStartOperator = JPQLNextOps.WINDOW_FOLLOWING;
+                break;
+        }
+        return frameStartOperator;
     }
 
     /**

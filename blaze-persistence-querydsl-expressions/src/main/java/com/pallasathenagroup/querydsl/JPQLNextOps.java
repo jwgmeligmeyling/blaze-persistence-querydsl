@@ -84,7 +84,26 @@ public enum JPQLNextOps implements Operator {
     TREAT_TIME(Time.class),
     TREAT_DATE(Date.class),
     TREAT_TIMESTAMP(Timestamp.class),
-    TREAT_CALENDAR(Calendar.class);
+    TREAT_CALENDAR(Calendar.class),
+
+    WINDOW_NAME(Object.class),
+    WINDOW_BASE(Object.class),
+    WINDOW_DEFINITION_1(Object.class), // base window name, partition by, order by or range clause
+    WINDOW_DEFINITION_2(Object.class), // two of base window name, partition by, order by or range clause
+    WINDOW_DEFINITION_3(Object.class), // three of  base window name, partition by, order by or range clause
+    WINDOW_DEFINITION_4(Object.class), //  base window name, partition by, order by and range clause
+    WINDOW_ORDER_BY(Object.class),
+    WINDOW_PARTITION_BY(Object.class),
+    WINDOW_ROWS(Object.class),
+    WINDOW_RANGE(Object.class),
+    WINDOW_GROUPS(Object.class),
+    WINDOW_BETWEEN(Object.class),
+    WINDOW_UNBOUNDED_PRECEDING(Object.class),
+    WINDOW_PRECEDING(Object.class),
+    WINDOW_FOLLOWING(Object.class),
+    WINDOW_UNBOUNDED_FOLLOWING(Object.class),
+    WINDOW_CURRENT_ROW(Object.class)
+    ;
 
     public static final Set<JPQLNextOps> LEFT_NESTED_SET_OPERATIONS = Collections.unmodifiableSet(EnumSet.of(
             JPQLNextOps.LEFT_NESTED_SET_UNION,

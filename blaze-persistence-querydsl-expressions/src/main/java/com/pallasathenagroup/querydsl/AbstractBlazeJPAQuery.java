@@ -501,7 +501,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     @Override
     public Q window(NamedWindow namedWindow) {
-        queryMixin.addFlag(new QueryFlag(QueryFlag.Position.AFTER_HAVING, namedWindow));
+        queryMixin.addFlag(new QueryFlag(QueryFlag.Position.AFTER_HAVING, namedWindow.getWindowDefinition()));
         return queryMixin.getSelf();
     }
 
