@@ -41,6 +41,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param alias The alias for the CTE
      * @param o The subquery expression
+     * @param <X> CTE type
      * @return this query
      * @since 1.0
      */
@@ -61,6 +62,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param alias The alias for the CTE
      * @param o The subquery expression
+     * @param <X> CTE type
      * @return this query
      * @since 1.0
      */
@@ -272,6 +274,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param subQueryExpression Subquery expression
      * @param alias The alias for the subquery from which it can be referenced in the outer query
+     * @param <X> Expression type
      * @return the current object
      * @since 1.0
      */
@@ -296,6 +299,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param o subquery
      * @param alias alias
+     * @param <X> Expression type
      * @return the current object
      * @since 1.0
      */
@@ -320,6 +324,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param o subquery
      * @param alias alias
+     * @param <X> Expression type
      * @return the current object
      * @since 1.0
      */
@@ -344,6 +349,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param o subquery
      * @param alias alias
+     * @param <X> Expression type
      * @return the current object
      * @since 1.0
      */
@@ -368,6 +374,7 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      *
      * @param o subquery
      * @param alias alias
+     * @param <X> Expression type
      * @return the current object
      * @since 1.0
      */

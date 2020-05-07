@@ -11,7 +11,6 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
-import com.pallasathenagroup.querydsl.CTEUtils.Binds;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.SubQueryExpression;
@@ -356,7 +355,7 @@ public class BasicQueryTest extends AbstractCoreTest {
     public void testCTEWithBinds() {
         doInJPA(entityManager -> {
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
-                    .with(idHolderCte, select(new CTEUtils.Binds<IdHolderCte>().bind(idHolderCte.id, book.id).bind(idHolderCte.name, book.name)).from(book))
+                    .with(idHolderCte, select(new Binds<IdHolderCte>().bind(idHolderCte.id, book.id).bind(idHolderCte.name, book.name)).from(book))
                     .select(idHolderCte.id).from(idHolderCte)
                     .fetch();
 
@@ -369,8 +368,8 @@ public class BasicQueryTest extends AbstractCoreTest {
         doInJPA(entityManager -> {
             List<Long> fetch = new BlazeJPAQuery<TestEntity>(entityManager, cbf)
                 .with(idHolderCte, select(
-                        CTEUtils.bind(idHolderCte.id, book.id),
-                        CTEUtils.bind(idHolderCte.name, book.name)).from(book))
+                        bind(idHolderCte.id, book.id),
+                        bind(idHolderCte.name, book.name)).from(book))
                 .select(idHolderCte.id).from(idHolderCte)
                 .fetch();
 

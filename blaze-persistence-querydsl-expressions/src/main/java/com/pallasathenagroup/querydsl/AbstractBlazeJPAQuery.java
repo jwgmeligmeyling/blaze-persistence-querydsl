@@ -483,7 +483,7 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
         return exceptAll(Arrays.asList(sq));
     }
 
-    private CTEUtils.Binds<T> binds = new CTEUtils.Binds<>();
+    private Binds<T> binds = new Binds<>();
 
     /**
      * Bind a CTE attribute to a select expression.

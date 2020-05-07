@@ -39,6 +39,7 @@ import static com.blazebit.persistence.parser.expression.WindowFrameMode.ROWS;
  * @author Jan-Willem Gmelig Meyling
  * @since 1.0
  */
+@SuppressWarnings({"unsafe", "rawtypes", "unused", "unchecked"})
 public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends MutableExpressionBase<T> {
 
     private static final String ORDER_BY = "order by ";

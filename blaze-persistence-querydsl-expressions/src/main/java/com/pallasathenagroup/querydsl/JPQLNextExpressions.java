@@ -1,13 +1,7 @@
 package com.pallasathenagroup.querydsl;
 
 import com.querydsl.core.Tuple;
-import com.querydsl.core.types.CollectionExpression;
-import com.querydsl.core.types.ConstantImpl;
-import com.querydsl.core.types.EntityPath;
-import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Operator;
-import com.querydsl.core.types.Ops;
-import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.*;
 import com.querydsl.core.types.dsl.ComparableExpression;
 import com.querydsl.core.types.dsl.DateExpression;
 import com.querydsl.core.types.dsl.DateTimeExpression;
@@ -68,7 +62,7 @@ public class JPQLNextExpressions {
      * Create a new detached JPQLQuery instance with the given projection
      *
      * @param expr projection
-     * @param <T>
+     * @param <T> result type
      * @return select(expr)
      * @see JPAExpressions#select(Expression)
      */
@@ -92,7 +86,7 @@ public class JPQLNextExpressions {
      * Create a new detached JPQLQuery instance with the given projection
      *
      * @param expr projection
-     * @param <T>
+     * @param <T> result type
      * @return select(distinct expr)
      * @see com.querydsl.jpa.JPAExpressions#selectDistinct(Expression)
      */
@@ -147,10 +141,11 @@ public class JPQLNextExpressions {
      * Create a avg(col) expression
      *
      * @param col collection
+     * @param <A> collection element type
      * @return avg(col)
      * @see JPAExpressions#avg(CollectionExpression)
      */
-    public static <A extends Comparable<? super A>> ComparableExpression<A> avg(CollectionExpression<?,A> col) {
+    public static <A extends Comparable<? super A>> ComparableExpression<A> avg(CollectionExpression<?, A> col) {
         return Expressions.comparableOperation((Class) col.getParameter(0), Ops.QuantOps.AVG_IN_COL, (Expression<?>) col);
     }
 
@@ -158,6 +153,7 @@ public class JPQLNextExpressions {
      * Create a max(col) expression
      *
      * @param left collection
+     * @param <A> collection element type
      * @return max(col)
      * @see JPAExpressions#max(CollectionExpression)
      */
@@ -169,6 +165,7 @@ public class JPQLNextExpressions {
      * Create a min(col) expression
      *
      * @param left collection
+     * @param <A> collection element type
      * @return min(col)
      * @see JPAExpressions#min(CollectionExpression)
      */
@@ -193,6 +190,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param date date
      * @param amount amount
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
      * @since 1.0
@@ -207,6 +205,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param date date
      * @param amount amount
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
      * @since 1.0
@@ -221,6 +220,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
      * @since 1.0
@@ -236,6 +236,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
      * @since 1.0
@@ -251,6 +252,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
      * @since 1.0
@@ -266,6 +268,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
@@ -281,6 +284,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
@@ -296,6 +300,7 @@ public class JPQLNextExpressions {
      * @param unit date part
      * @param start start
      * @param end end
+     * @param <D> date type
      * @return difference in units
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
@@ -310,6 +315,7 @@ public class JPQLNextExpressions {
      *
      * @param unit date part to truncate to
      * @param expr truncated date
+     * @param <D> date type
      * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateExpression)
      * @since 1.0
      */
@@ -322,6 +328,7 @@ public class JPQLNextExpressions {
      *
      * @param unit com.querydsl.sql.DatePart to truncate to
      * @param expr truncated datetime
+     * @param <D> date type
      * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateTimeExpression)
      * @since 1.0
      */
@@ -334,6 +341,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param years years to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
      * @since 1.0
@@ -347,6 +355,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param months months to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addYears(DateTimeExpression, int)
      * @since 1.0
@@ -360,6 +369,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param weeks weeks to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addWeeks(DateTimeExpression, int)
      * @since 1.0
@@ -373,6 +383,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param days days to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addDays(DateTimeExpression, int)
      * @since 1.0
@@ -386,6 +397,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param hours hours to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addHours(DateTimeExpression, int)
      * @since 1.0
@@ -399,6 +411,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param minutes minutes to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addMinutes(DateTimeExpression, int)
      * @since 1.0
@@ -412,6 +425,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param seconds seconds to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addSeconds(DateTimeExpression, int)
      * @since 1.0
@@ -425,6 +439,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param years years to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
      * @since 1.0
@@ -438,6 +453,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param months months to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addMonths(DateExpression, int)
      * @since 1.0
@@ -451,6 +467,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param weeks weeks to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addWeeks(DateExpression, int)
      * @since 1.0
@@ -464,6 +481,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param days days to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addDays(DateExpression, int)
      * @since 1.0
@@ -477,6 +495,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param years years to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
      * @since 1.0
@@ -490,6 +509,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param months months to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addYears(DateTimeExpression, int)
      * @since 1.0
@@ -503,6 +523,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param weeks weeks to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addWeeks(DateTimeExpression, int)
      * @since 1.0
@@ -516,6 +537,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param days days to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addDays(DateTimeExpression, int)
      * @since 1.0
@@ -529,6 +551,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param hours hours to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addHours(DateTimeExpression, int)
      * @since 1.0
@@ -542,6 +565,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param minutes minutes to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addMinutes(DateTimeExpression, int)
      * @since 1.0
@@ -555,6 +579,7 @@ public class JPQLNextExpressions {
      *
      * @param date datetime
      * @param seconds seconds to add
+     * @param <D> date type
      * @return converted datetime
      * @see com.querydsl.sql.SQLExpressions#addSeconds(DateTimeExpression, int)
      * @since 1.0
@@ -568,6 +593,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param years years to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addYears(DateExpression, int)
      * @since 1.0
@@ -581,6 +607,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param months months to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addMonths(DateExpression, int)
      * @since 1.0
@@ -594,6 +621,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param weeks weeks to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addWeeks(DateExpression, int)
      * @since 1.0
@@ -607,6 +635,7 @@ public class JPQLNextExpressions {
      *
      * @param date date
      * @param days days to add
+     * @param <D> date type
      * @return converted date
      * @see com.querydsl.sql.SQLExpressions#addDays(DateExpression, int)
      * @since 1.0
@@ -641,6 +670,7 @@ public class JPQLNextExpressions {
      * Start a window function expression
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return sum(expr)
      * @since 1.0
      */
@@ -684,6 +714,7 @@ public class JPQLNextExpressions {
      * Start a window function expression
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return avg(expr)
      * @since 1.0
      */
@@ -695,10 +726,11 @@ public class JPQLNextExpressions {
      * Start a window function expression
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return min(expr)
      * @since 1.0
      */
-    public static <T extends Comparable> WindowOver<T> min(Expression<T> expr) {
+    public static <T extends Comparable<? super T>> WindowOver<T> min(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.MIN_AGG, expr);
     }
 
@@ -706,10 +738,11 @@ public class JPQLNextExpressions {
      * Start a window function expression
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return max(expr)
      * @since 1.0
      */
-    public static <T extends Comparable> WindowOver<T> max(Expression<T> expr) {
+    public static <T extends Comparable<? super T>> WindowOver<T> max(Expression<T> expr) {
         return new WindowOver<T>(expr.getType(), Ops.AggOps.MAX_AGG, expr);
     }
 
@@ -717,6 +750,7 @@ public class JPQLNextExpressions {
      * expr evaluated at the row that is one row after the current row within the partition;
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return lead(expr)
      * @since 1.0
      */
@@ -728,6 +762,7 @@ public class JPQLNextExpressions {
      * expr evaluated at the row that is one row before the current row within the partition
      *
      * @param expr expression
+     * @param <T> number expression type
      * @return lag(expr)
      * @since 1.0
      */
@@ -740,6 +775,7 @@ public class JPQLNextExpressions {
      * The returned value has the data type of the expr.
      *
      * @param expr measure expression
+     * @param <T> number expression type
      * @param n one based row index
      * @return nth_value(expr, n)
      * @since 1.0
@@ -766,6 +802,7 @@ public class JPQLNextExpressions {
      * appropriate bucket number to each row
      *
      * @param num bucket size
+     * @param <T> number expression type
      * @return ntile(num)
      * @since 1.0
      */
@@ -829,6 +866,7 @@ public class JPQLNextExpressions {
      * returns value evaluated at the row that is the first row of the window frame
      *
      * @param expr argument
+     * @param <T> number expression type
      * @return first_value(expr)
      * @since 1.0
      */
@@ -840,6 +878,7 @@ public class JPQLNextExpressions {
      * returns value evaluated at the row that is the last row of the window frame
      *
      * @param expr argument
+     * @param <T> number expression type
      * @return last_value(expr)
      * @since 1.0
      */
@@ -993,4 +1032,7 @@ public class JPQLNextExpressions {
         }
     }
 
+    public static <T> Operation<T> bind(Path<? super T> path, Expression<? extends T> expression) {
+        return ExpressionUtils.operation(expression.getType(), JPQLNextOps.BIND, expression, path);
+    }
 }

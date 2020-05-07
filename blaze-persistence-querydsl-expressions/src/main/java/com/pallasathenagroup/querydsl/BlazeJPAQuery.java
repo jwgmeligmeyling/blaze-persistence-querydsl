@@ -47,8 +47,8 @@ public class BlazeJPAQuery<T> extends AbstractBlazeJPAQuery<T, BlazeJPAQuery<T>>
      * Creates a new query
      *
      * @param em The {@code EntityManager}
+     * @param metadata The {@code QueryMetadata}
      * @param criteriaBuilderFactory The {@code CriteriaBuilderFactory}
-     * @param criteriaBuilderFactory
      */
     public BlazeJPAQuery(EntityManager em, QueryMetadata metadata, CriteriaBuilderFactory criteriaBuilderFactory) {
         super(em, metadata, criteriaBuilderFactory);

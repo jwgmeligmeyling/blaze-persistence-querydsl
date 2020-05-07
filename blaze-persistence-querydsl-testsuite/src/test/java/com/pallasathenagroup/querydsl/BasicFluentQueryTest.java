@@ -11,7 +11,6 @@ import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE1;
 import com.blazebit.persistence.testsuite.entity.TestAdvancedCTE2;
 import com.blazebit.persistence.testsuite.entity.TestCTE;
 import com.blazebit.persistence.testsuite.tx.TxVoidWork;
-import com.pallasathenagroup.querydsl.CTEUtils.Binds;
 import com.pallasathenagroup.querydsl.api.CriteriaBuilder;
 import com.pallasathenagroup.querydsl.api.FinalSetOperationCriteriaBuilder;
 import com.querydsl.core.Tuple;

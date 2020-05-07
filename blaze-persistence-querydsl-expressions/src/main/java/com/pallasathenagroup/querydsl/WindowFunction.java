@@ -22,6 +22,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.SimpleExpression;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -32,6 +33,7 @@ import java.util.Objects;
  * @author Jan-Willem Gmelig Meyling
  * @since 1.0
  */
+@SuppressWarnings("unused")
 public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
 
     private final Expression<A> target;
@@ -66,7 +68,7 @@ public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
     @Override
     public SimpleExpression<A> getValue() {
         if (value == null) {
-            value = Expressions.template(target.getType(), "{0} over ({1})", ImmutableList.of(target, super.getValue()));
+            value = Expressions.template(target.getType(), "{0} over ({1})", (List<?>) ImmutableList.of(target, super.getValue()));
         }
         return value;
     }
@@ -78,7 +80,6 @@ public class WindowFunction<A> extends WindowDefinition<WindowFunction<A>, A> {
      * @return alias expression
      * @since 1.0
      */
-    @SuppressWarnings("unchecked")
     public SimpleExpression<A> as(Expression<A> alias) {
         return Expressions.operation(getType(), Ops.ALIAS, this, alias);
     }
