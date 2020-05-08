@@ -3,9 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>blaze-persistence-querydsl</artifactId>
-        <groupId>com.pallasathenagroup.querydsl</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <groupId>com.blazebit</groupId>
+        <artifactId>blaze-persistence-integration-querydsl-parent</artifactId>
+        <version>1.4.1</version>
         <relativePath>../</relativePath>
     </parent>
     <properties>
@@ -24,13 +24,13 @@
         <dependency>
             <groupId>com.blazebit</groupId>
             <artifactId>blaze-persistence-core-api</artifactId>
-            <version>${blaze-persistence.version}</version>
+            <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.blazebit</groupId>
             <artifactId>blaze-persistence-core-parser</artifactId>
-            <version>${blaze-persistence.version}</version>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -44,30 +44,15 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
-                    <subpackages>com.pallasathenagroup</subpackages>
-                    <dependencySourceIncludes>com.querydsl:*,com.blazebit:*</dependencySourceIncludes>
+                    <dependencySourceIncludes>com.querydsl:*</dependencySourceIncludes>
                     <links>
                         <link>https://javadoc.io/doc/com.querydsl/querydsl-jpa/${querydsl.version}</link>
                         <link>https://javadoc.io/doc/com.querydsl/querydsl-sql/${querydsl.version}</link>
                         <link>https://javadoc.io/doc/com.querydsl/querydsl-core/${querydsl.version}</link>
-                        <link>https://www.javadoc.io/doc/com.blazebit/blaze-persistence-core-api/${blaze-persistence.version}</link>
                     </links>
-                    <includeDependencySources>true</includeDependencySources>
                     <tags>
                         <tag>
                             <name>apiNote</name>
@@ -83,14 +68,6 @@
                         </additionalDependency>
                     </additionalDependencies>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
