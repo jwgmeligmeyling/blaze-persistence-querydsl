@@ -26,7 +26,12 @@ public class SetOperationFlag extends QueryFlag {
     }
 
     public static SetOperationFlag getSetOperationFlag(QueryMetadata queryMetadata) {
-        return queryMetadata.getFlags().stream().filter(SetOperationFlag.class::isInstance).map(SetOperationFlag.class::cast).findAny().orElse(null);
+        for (QueryFlag flag : queryMetadata.getFlags()) {
+            if (flag instanceof SetOperationFlag) {
+                return (SetOperationFlag) flag;
+            }
+        }
+        return null;
     }
 
 }

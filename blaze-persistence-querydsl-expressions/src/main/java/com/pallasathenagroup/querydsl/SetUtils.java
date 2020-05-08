@@ -5,8 +5,6 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.SubQueryExpression;
 
-import java.util.Arrays;
-
 /**
  * Utility methods for generating set operations.
  *
@@ -28,92 +26,132 @@ public final class SetUtils {
      */
     @SafeVarargs
     public static <T> Expression<T> setOperation(JPQLNextOps setOperation, boolean wrapSets, Expression<T>... expressions) {
-        return Arrays.stream(expressions)
-                .filter(expression -> expression.accept(NotEmptySetVisitor.INSTANCE, null))
-                .reduce((a, b) -> a.accept(new ExpressionVoidDefaultVisitorImpl<>(setOperation, wrapSets, a, b), null)).get();
+        Expression<T> result = expressions[0];
+        SetOperationVisitor<T> setOperationVisitor = new SetOperationVisitor<>(setOperation, wrapSets);
+        for (int i = 1; i < expressions.length; i++) {
+            Expression<T> expression = expressions[i];
+            if (Boolean.TRUE.equals(expression.accept(NotEmptySetVisitor.INSTANCE, null))) {
+                result = result.accept(setOperationVisitor, expression);
+            }
+        }
+        return result;
     }
 
     private static JPQLNextOps getLeftNestedSetOperation(JPQLNextOps setOperation) {
-        JPQLNextOps leftNestedOperation = null;
         switch (setOperation) {
             case SET_UNION:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_UNION;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_UNION;
             case SET_UNION_ALL:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_UNION_ALL;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_UNION_ALL;
             case SET_INTERSECT:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_INTERSECT;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_INTERSECT;
             case SET_INTERSECT_ALL:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_INTERSECT_ALL;
             case SET_EXCEPT:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_EXCEPT;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_EXCEPT;
             case SET_EXCEPT_ALL:
-                leftNestedOperation = JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL;
-                break;
+                return JPQLNextOps.LEFT_NESTED_SET_EXCEPT_ALL;
             default:
-                leftNestedOperation = setOperation;
+                return setOperation;
         }
-        return leftNestedOperation;
     }
 
+    /**
+     * Create a union set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> union(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_UNION, true, expressions);
     }
 
+    /**
+     * Create a union all set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> unionAll(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_UNION_ALL, true, expressions);
     }
 
+    /**
+     * Create a intersect set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> intersect(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_INTERSECT, true, expressions);
     }
 
+    /**
+     * Create a intersect all set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> intersectAll(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_INTERSECT_ALL, true, expressions);
     }
 
+    /**
+     * Create a except set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> except(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_EXCEPT, true, expressions);
     }
 
+    /**
+     * Create a except all set operation
+     *
+     * @param expressions Operands for the set operation
+     * @param <T> Set operation result type
+     * @return The set operation
+     */
     @SafeVarargs
     public static <T> Expression<T> exceptAll(Expression<T>... expressions) {
         return setOperation(JPQLNextOps.SET_EXCEPT_ALL, true, expressions);
     }
 
-    private static class ExpressionVoidDefaultVisitorImpl<T> extends DefaultVisitorImpl<Expression<T>, Void> {
-        private final Expression<T> a;
+    private static class SetOperationVisitor<T> extends DefaultVisitorImpl<Expression<T>, Expression<T>> {
+
         private final boolean wrapSets;
         private final JPQLNextOps setOperation, leftNestedOperation;
-        private final Expression<T> b;
 
-        public ExpressionVoidDefaultVisitorImpl(JPQLNextOps setOperation, boolean wrapSets, Expression<T> a, Expression<T> b) {
-            this.a = a;
+        public SetOperationVisitor(JPQLNextOps setOperation, boolean wrapSets) {
             this.wrapSets = wrapSets;
             this.leftNestedOperation = getLeftNestedSetOperation(setOperation);
             this.setOperation = setOperation;
-            this.b = b;
         }
 
         @Override
-        public Expression<T> visit(Operation<?> rv, Void rhs) {
-            return ExpressionUtils.operation(a.getType(), wrapSets ? leftNestedOperation : setOperation, a, b);
+        @SuppressWarnings("unchecked")
+        public Expression<T> visit(Operation<?> lhs, Expression<T> rhs) {
+            return (Expression<T>) ExpressionUtils.operation(lhs.getType(), wrapSets ? leftNestedOperation : setOperation, lhs, rhs);
         }
 
         @Override
-        public Expression<T> visit(SubQueryExpression<?> subQueryExpression, Void rhs) {
-            SetOperationFlag setOperationFlag = SetOperationFlag.getSetOperationFlag(subQueryExpression.getMetadata());
+        @SuppressWarnings("unchecked")
+        public Expression<T> visit(SubQueryExpression<?> lhs, Expression<T> rhs) {
+            SetOperationFlag setOperationFlag = SetOperationFlag.getSetOperationFlag(lhs.getMetadata());
             boolean nestedSet = setOperationFlag != null;
-            return ExpressionUtils.operation(a.getType(), nestedSet && wrapSets ? leftNestedOperation : setOperation, a, b);
+            return (Expression<T>) ExpressionUtils.operation(lhs.getType(), nestedSet && wrapSets ? leftNestedOperation : setOperation, lhs, rhs);
         }
+
     }
 }

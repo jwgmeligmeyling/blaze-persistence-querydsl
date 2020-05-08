@@ -63,6 +63,8 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
 
     protected boolean cachable = false;
 
+    protected Binds<T> binds = new Binds<>();
+
     public AbstractBlazeJPAQuery(CriteriaBuilderFactory criteriaBuilderFactory) {
         super(null, JPQLNextTemplates.DEFAULT, new DefaultQueryMetadata());
         this.criteriaBuilderFactory = criteriaBuilderFactory;
@@ -114,9 +116,9 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    public WithBuilder<Q> with(EntityPath<?> alias, Path<?>... columns) {
-        Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
-        Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_COLUMNS, alias, columnsCombined);
+    public WithBuilder<Q> with(final EntityPath<?> alias, final Path<?>... columns) {
+        final Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
+        final Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_COLUMNS, alias, columnsCombined);
         return new WithBuilder<Q>() {
             @Override
             public Q as(Expression expr) {
@@ -139,9 +141,9 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Override
-    public WithBuilder<Q> withRecursive(EntityPath<?> alias, Path<?>... columns) {
-        Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
-        Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
+    public WithBuilder<Q> withRecursive(final EntityPath<?> alias, Path<?>... columns) {
+        final Expression<Object> columnsCombined = ExpressionUtils.list(Object.class, columns);
+        final Expression<?> aliasCombined = Expressions.operation(alias.getType(), JPQLNextOps.WITH_RECURSIVE_COLUMNS, alias, columnsCombined);
         return new WithBuilder<Q>() {
             @Override
             public Q as(Expression expr) {
@@ -157,12 +159,11 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     // TODO @Override
-    @SuppressWarnings("unchecked")
     protected Query createQuery(@Nullable QueryModifiers modifiers, boolean forCount) {
         Queryable<T, ?> criteriaBuilder = getQueryable(modifiers);
 
         if (forCount) {
-            return ((FullQueryBuilder<T, ?>) criteriaBuilder).getCountQuery();
+            return  getFullQueryBuilder(null).getCountQuery();
         }
 
         TypedQuery<T> query = criteriaBuilder.getQuery();
@@ -182,28 +183,34 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
             }
         }
 
-        logQuery(criteriaBuilder.getQueryString(), Collections.emptyMap());
+        logQuery(criteriaBuilder.getQueryString(), null);
         return query;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(int firstResult, int maxResults) {
-        return ((FullQueryBuilder<T,?>) getQueryable(getMetadata().getModifiers()))
+        return  getFullQueryBuilder(null)
                 .page(firstResult, maxResults)
                 .getResultList();
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults) {
-        return ((FullQueryBuilder<T,?>) getQueryable(getMetadata().getModifiers()))
+        return getFullQueryBuilder(null)
                 .page(keysetPage, firstResult, maxResults)
                 .getResultList();
     }
 
     public String getQueryString() {
         return getQueryable(null).getQueryString();
+    }
+
+    protected FullQueryBuilder<T, ?> getFullQueryBuilder(@Nullable QueryModifiers modifiers) {
+        Queryable<T, ?> queryable = getQueryable(modifiers);
+        if (queryable instanceof FullQueryBuilder) {
+            return (FullQueryBuilder<T, ?>) queryable;
+        }
+        throw new UnsupportedOperationException("This feature is not yet supported on " + queryable.getClass().getSimpleName());
     }
 
     protected Queryable<T, ?> getQueryable(@Nullable QueryModifiers modifiers) {
@@ -291,8 +298,8 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     }
 
     @Nullable
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public T fetchOne() throws NonUniqueResultException {
         try {
             Query query = createQuery(getMetadata().getModifiers(), false);
@@ -482,8 +489,6 @@ public abstract class AbstractBlazeJPAQuery<T, Q extends AbstractBlazeJPAQuery<T
     public final <RT> SetExpression<RT> exceptAll(SubQueryExpression<RT>... sq) {
         return exceptAll(Arrays.asList(sq));
     }
-
-    private Binds<T> binds = new Binds<>();
 
     /**
      * Bind a CTE attribute to a select expression.

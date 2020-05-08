@@ -30,15 +30,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * Register a common table expression (CTE).
      * Analog to {@link com.querydsl.sql.ProjectableSQLQuery#with(Path, SubQueryExpression)}.
      *
-     * @example <pre>
-     * List&lt;Long&gt; fetch = new BlazeJPAQuery&lt;TestEntity&gt;(entityManager, cbf)
-     *         .with(idHolderCte, JPAExpressions.select(
-     *                 CTEUtils.bind(idHolderCte.id, book.id),
-     *                 CTEUtils.bind(idHolderCte.name, book.name)).from(book))
-     *         .select(idHolderCte.id).from(idHolderCte)
-     *         .fetch();
-     * </pre>
-     *
      * @param alias The alias for the CTE
      * @param o The subquery expression
      * @param <X> CTE type
@@ -50,15 +41,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     /**
      * Register a recursive common table expression (CTE).
      * Analog to {@link com.querydsl.sql.ProjectableSQLQuery#withRecursive(Path, SubQueryExpression)}.
-     *
-     * @example <pre>
-     * List&lt;Long&gt; fetch = new BlazeJPAQuery&lt;TestEntity&gt;(entityManager, cbf)
-     *         .with(idHolderCte, JPAExpressions.select(
-     *                 CTEUtils.bind(idHolderCte.id, book.id),
-     *                 CTEUtils.bind(idHolderCte.name, book.name)).from(book))
-     *         .select(idHolderCte.id).from(idHolderCte)
-     *         .fetch();
-     * </pre>
      *
      * @param alias The alias for the CTE
      * @param o The subquery expression
@@ -72,13 +54,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * Register a common table expression (CTE). Returns a builder through which
      * the CTE can be provided as {@link SubQueryExpression}.
      *
-     * @example <pre>
-     * List&lt;Long&gt; fetch = new BlazeJPAQuery&lt;TestEntity&gt;(entityManager, cbf)
-     *         .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book).where(book.id.eq(1L)), select(book.id, book.name).from(book)
-     *                 .join(idHolderCte).on(idHolderCte.id.add(1L).eq(book.id))))
-     *         .select(idHolderCte.id).from(idHolderCte)
-     *         .fetch();
-     * </pre>
      * @apiNote This version does not allow for set operands to use different column bindings.
      *  For that purpose, use {@link #with(Path, SubQueryExpression)} instead, and wrap each
      *  select expression inside a {@link JPQLNextOps#BIND} operation.
@@ -93,13 +68,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * Register a recursive common table expression (CTE). Returns a builder through which
      * the CTE can be provided as {@link SubQueryExpression}.
      *
-     * @example <pre>
-     * List&lt;Long&gt; fetch = new BlazeJPAQuery&lt;TestEntity&gt;(entityManager, cbf)
-     *         .withRecursive(idHolderCte, idHolderCte.id, idHolderCte.name).as(union(select(book.id, book.name).from(book).where(book.id.eq(1L)), select(book.id, book.name).from(book)
-     *                 .join(idHolderCte).on(idHolderCte.id.add(1L).eq(book.id))))
-     *         .select(idHolderCte.id).from(idHolderCte)
-     *         .fetch();
-     * </pre>
      * @apiNote This version does not allow for set operands to use different column bindings.
      *  For that purpose, use {@link #with(Path, SubQueryExpression)} instead, and wrap each
      *  select expression inside a {@link JPQLNextOps#BIND} operation.
@@ -113,14 +81,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     /**
      * Select from a set of values using the {@code VALUES} clause.
      *
-     * @example
-     * <pre>
-     * List&lt;Book&gt; result = new BlazeJPAQuery&lt;Book&gt;(entityManager, cbf)
-     *         .fromValues(QBook.book, Collections.singleton(theBook))
-     *         .select(QBook.book)
-     *         .fetch();
-     * </pre>
-     *
      * @param path Type of values
      * @param elements The elements
      * @param <X> The element type
@@ -132,14 +92,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     /**
      * Select from a set of values using the {@code VALUES} clause.
      *
-     * @example
-     * <pre>
-     * List&lt;Book&gt; result = new BlazeJPAQuery&lt;Book&gt;(entityManager, cbf)
-     *         .fromIdentifiableValues(QBook.book, Collections.singleton(theBook))
-     *         .select(QBook.book)
-     *         .fetch();
-     * </pre>
-     *
      * @param path Type of values
      * @param elements The elements
      * @param <X> The element type
@@ -150,16 +102,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
 
     /**
      * Select from a set of values using the {@code VALUES} clause.
-     *
-     * @example
-     * <pre>
-     * StringPath bookName = Expressions.stringPath("bookName");
-     *
-     * List&lt;String&gt; result = new BlazeJPAQuery&lt;String&gt;(entityManager, cbf)
-     *         .fromValues(book.name, bookName, Collections.singleton("book"))
-     *         .select(bookName)
-     *         .fetch();
-     * </pre>
      *
      * @param path Type of values
      * @param alias The alias from which the values can be referenced
@@ -284,19 +226,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * Adds a left join to the given subquery target.
      * Analog to {@link com.querydsl.sql.SQLCommonQuery#leftJoin(SubQueryExpression, Path)}.
      *
-     * @example <pre>
-     * QRecursiveEntity t = new QRecursiveEntity("t");
-     * QRecursiveEntity subT = new QRecursiveEntity("subT");
-     * QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-     *
-     * List&lt;Tuple&gt; fetch = new BlazeJPAQuery&lt;RecursiveEntity&gt;(entityManager, cbf)
-     *         .select(t, subT2)
-     *         .from(t)
-     *         .leftJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
-     *         .lateral()
-     *         .fetch();
-     * </pre>
-     *
      * @param o subquery
      * @param alias alias
      * @param <X> Expression type
@@ -308,19 +237,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     /**
      * Adds a right join to the given target.
      * Analog to {@link com.querydsl.sql.SQLCommonQuery#rightJoin(SubQueryExpression, Path)}.
-     *
-     * @example <pre>
-     * QRecursiveEntity t = new QRecursiveEntity("t");
-     * QRecursiveEntity subT = new QRecursiveEntity("subT");
-     * QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-     *
-     * List&lt;Tuple&gt; fetch = new BlazeJPAQuery&lt;RecursiveEntity&gt;(entityManager, cbf)
-     *         .select(t, subT2)
-     *         .from(t)
-     *         .rightJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
-     *         .lateral()
-     *         .fetch();
-     * </pre>
      *
      * @param o subquery
      * @param alias alias
@@ -334,19 +250,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * Adds a full join to the given target.
      * Analog to {@link com.querydsl.sql.SQLCommonQuery#fullJoin(SubQueryExpression, Path)}.
      *
-     * @example <pre>
-     * QRecursiveEntity t = new QRecursiveEntity("t");
-     * QRecursiveEntity subT = new QRecursiveEntity("subT");
-     * QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-     *
-     * List&lt;Tuple&gt; fetch = new BlazeJPAQuery&lt;RecursiveEntity&gt;(entityManager, cbf)
-     *         .select(t, subT2)
-     *         .from(t)
-     *         .fullJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
-     *         .lateral()
-     *         .fetch();
-     * </pre>
-     *
      * @param o subquery
      * @param alias alias
      * @param <X> Expression type
@@ -358,19 +261,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
     /**
      * Adds a inner join to the given target.
      * Analog to {@link com.querydsl.sql.SQLCommonQuery#innerJoin(SubQueryExpression, Path)}.
-     *
-     * @example <pre>
-     * QRecursiveEntity t = new QRecursiveEntity("t");
-     * QRecursiveEntity subT = new QRecursiveEntity("subT");
-     * QRecursiveEntity subT2 = new QRecursiveEntity("subT2");
-     *
-     * List&lt;Tuple&gt; fetch = new BlazeJPAQuery&lt;RecursiveEntity&gt;(entityManager, cbf)
-     *         .select(t, subT2)
-     *         .from(t)
-     *         .innerJoin(select(subT).from(t.children, subT).orderBy(subT.id.asc()).limit(1), subT2)
-     *         .lateral()
-     *         .fetch();
-     * </pre>
      *
      * @param o subquery
      * @param alias alias
@@ -412,7 +302,6 @@ public interface ExtendedJPAQuery<T, Q extends ExtendedJPAQuery<T, Q>> extends J
      * @see #union(List)
      */
     <RT> SetExpression<RT> intersect(List<SubQueryExpression<RT>> sq);
-
 
     /**
      * Creates an intersect expression for the given subqueries

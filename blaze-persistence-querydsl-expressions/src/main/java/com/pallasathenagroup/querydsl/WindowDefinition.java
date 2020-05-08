@@ -2,34 +2,22 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.parser.expression.WindowFrameMode;
 import com.blazebit.persistence.parser.expression.WindowFramePositionType;
-import com.google.common.collect.ImmutableList;
-import com.querydsl.core.types.Constant;
-import com.querydsl.core.types.ConstantImpl;
 import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.MutableExpressionBase;
 import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.Operator;
-import com.querydsl.core.types.Ops;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Visitor;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.SimpleExpression;
-import com.querydsl.core.types.dsl.SimpleOperation;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static com.blazebit.persistence.parser.expression.WindowFrameMode.GROUPS;
-import static com.blazebit.persistence.parser.expression.WindowFrameMode.RANGE;
-import static com.blazebit.persistence.parser.expression.WindowFrameMode.ROWS;
+import static com.blazebit.persistence.parser.expression.WindowFrameMode.*;
 
 /**
  * A base class for window definition expressions.
@@ -98,6 +86,8 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
         return getValue().accept(v, context);
     }
 
+
+
     /**
      * Construct a template expression for this Window Definition.
      *
@@ -106,25 +96,33 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
      */
     public Expression<T> getValue() {
         if (value == null) {
-            Optional<Expression> baseWindow = Optional.ofNullable(baseWindowName)
-                    .map(name -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_BASE, Expressions.constant(baseWindowName)));
+            List<Expression<?>> arguments = new ArrayList<>();
 
-            Optional<SimpleOperation<Object>> partitionByOperation = partitionBy.stream()
-                    .reduce((a, b) -> Expressions.operation(a.getType(), Ops.LIST, a, b))
-                    .map(a -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_PARTITION_BY, a));
+            if (baseWindowName != null) {
+                Expression<?> baseWindow = Expressions.operation(Object.class, JPQLNextOps.WINDOW_BASE, Expressions.constant(baseWindowName));
+                arguments.add(baseWindow);
+            }
 
-            Optional<SimpleOperation<Object>> orderByOperation = orderBy.stream()
-                    .map(orderSpecifier -> (Expression) Expressions.template(
+            if (! partitionBy.isEmpty()) {
+                Expression<?> partitionByOperation = Expressions.operation(Object.class, JPQLNextOps.WINDOW_PARTITION_BY, Expressions.list(partitionBy.toArray(new Expression<?>[0])));
+                arguments.add(partitionByOperation);
+            }
+
+            if (! orderBy.isEmpty()) {
+                Expression<?>[] orderByTemplates = new Expression<?>[orderBy.size()];
+                for (int i = 0; i < orderBy.size(); i++) {
+                    OrderSpecifier<?> orderSpecifier = orderBy.get(i);
+                    orderByTemplates[i] = Expressions.template(
                             Object.class,
                             "{0} {1s} {2s}",
                             orderSpecifier.getTarget(),
                             orderSpecifier.getOrder(),
                             orderSpecifier.getNullHandling() != null && orderSpecifier.getNullHandling() != OrderSpecifier.NullHandling.Default ? orderSpecifier.getNullHandling() == OrderSpecifier.NullHandling.NullsFirst ? "NULLS FIRST" : "NULLS LAST" : ""
-                    ))
-                    .reduce((a, b) -> Expressions.operation(Object.class, Ops.LIST, a, b))
-                    .map(a -> Expressions.operation(Object.class, JPQLNextOps.WINDOW_ORDER_BY, a));
-
-            Optional<Operation> frameClauseOperation;
+                    );
+                }
+                Expression<?> orderByOperation = Expressions.operation(Object.class, JPQLNextOps.WINDOW_ORDER_BY, Expressions.list(orderByTemplates));
+                arguments.add(orderByOperation);
+            }
 
             if (frameMode != null) {
                 Operator frameOperator;
@@ -156,15 +154,9 @@ public class WindowDefinition<Q extends WindowDefinition<Q, ?>, T> extends Mutab
                     rangeClause = Expressions.operation(Object.class, JPQLNextOps.WINDOW_BETWEEN, frameStart, frameEnd);
                 }
 
-                frameClauseOperation = Optional.of(Expressions.operation(Object.class, frameOperator, rangeClause));
-            } else {
-                frameClauseOperation = Optional.empty();
+                Expression<?> frameClauseOperation = Expressions.operation(Object.class, frameOperator, rangeClause);
+                arguments.add(frameClauseOperation);
             }
-
-            List<? extends Expression> arguments = Stream.of(baseWindow, partitionByOperation, orderByOperation, frameClauseOperation)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toList());
 
             Operator windowOperator;
 

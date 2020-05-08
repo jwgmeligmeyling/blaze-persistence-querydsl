@@ -73,8 +73,6 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static com.pallasathenagroup.querydsl.JPQLNextOps.BIND;
@@ -228,9 +226,9 @@ public class BlazeCriteriaBuilderRenderer<T> {
             public Object visit(SubQueryExpression<?> subQuery, Object criteriaBuilder) {
                 QueryMetadata subQueryMetadata = subQuery.getMetadata();
 
-                Optional<QueryFlag> setOperation = subQueryMetadata.getFlags().stream().filter(flag -> flag.getPosition().equals(Position.START_OVERRIDE)).findAny();
-                if (setOperation.isPresent()) {
-                    return setOperation.get().getFlag().accept(this, criteriaBuilder);
+                SetOperationFlag setOperationFlag = getSetOperationFlag(subQueryMetadata);
+                if (setOperationFlag != null) {
+                    return setOperationFlag.getFlag().accept(this, criteriaBuilder);
                 }
 
                 renderCTEs(subQueryMetadata);
@@ -268,9 +266,19 @@ public class BlazeCriteriaBuilderRenderer<T> {
                                 ExtendedAttribute<?, ?> attribute = ownedSingularAttribute.getValue();
 
                                 if (!JpaMetamodelUtils.isAssociation(attribute.getAttribute())) {
-                                    SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(attributeName);
+                                    final SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(attributeName);
                                     BeanPath<?> beanPath = new BeanPath<Object>(attribute.getElementClass(), pathExpression, attributeName);
-                                    setExpressionSubqueries(beanPath, bindBuilder::select, bindBuilder::selectSubqueries);
+                                    setExpressionSubqueries(beanPath, new BlazeCriteriaBuilderRenderer.Function<String, Object>() {
+                                        @Override
+                                        public Object apply(String expression) {
+                                            return bindBuilder.select(expression);
+                                        }
+                                    }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<?>>() {
+                                        @Override
+                                        public MultipleSubqueryInitiator<?> apply(String expression) {
+                                            return bindBuilder.selectSubqueries(expression);
+                                        }
+                                    });
                                 }
                             }
                         } else {
@@ -293,8 +301,18 @@ public class BlazeCriteriaBuilderRenderer<T> {
 
                                 if (alias != null) {
                                     String aliasString = relativePathString(cteEntityPath, alias);
-                                    SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(aliasString);
-                                    setExpressionSubqueries(projExpression, bindBuilder::select, bindBuilder::selectSubqueries);
+                                    final SelectBuilder<?> bindBuilder = selectBaseCriteriaBuilder.bind(aliasString);
+                                    setExpressionSubqueries(projExpression, new BlazeCriteriaBuilderRenderer.Function<String, Object>() {
+                                        @Override
+                                        public Object apply(String expression) {
+                                            return bindBuilder.select(expression);
+                                        }
+                                    }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<?>>() {
+                                        @Override
+                                        public MultipleSubqueryInitiator<?> apply(String expression) {
+                                            return bindBuilder.selectSubqueries(expression);
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -397,9 +415,19 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
     }
 
-    private void renderHaving(QueryMetadata metadata, HavingBuilder<?> criteriaBuilder) {
+    private void renderHaving(QueryMetadata metadata, final HavingBuilder<?> criteriaBuilder) {
         if (metadata.getHaving() != null) {
-            setExpressionSubqueries(metadata.getHaving(), criteriaBuilder::havingExpression, criteriaBuilder::havingExpressionSubqueries);
+            setExpressionSubqueries(metadata.getHaving(), new BlazeCriteriaBuilderRenderer.Function<String, Object>() {
+                @Override
+                public Object apply(String expression) {
+                    return criteriaBuilder.havingExpression(expression);
+                }
+            }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<?>>() {
+                @Override
+                public MultipleSubqueryInitiator<?> apply(String expression) {
+                    return criteriaBuilder.havingExpressionSubqueries(expression);
+                }
+            });
         }
     }
 
@@ -409,9 +437,19 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
     }
 
-    private void renderWhere(QueryMetadata metadata, WhereBuilder<?> criteriaBuilder) {
+    private void renderWhere(QueryMetadata metadata, final WhereBuilder<?> criteriaBuilder) {
         if (metadata.getWhere() != null) {
-            setExpressionSubqueries(metadata.getWhere(), criteriaBuilder::whereExpression, criteriaBuilder::whereExpressionSubqueries);
+            setExpressionSubqueries(metadata.getWhere(), new BlazeCriteriaBuilderRenderer.Function<String, Object>() {
+                @Override
+                public Object apply(String expression) {
+                    return criteriaBuilder.whereExpression(expression);
+                }
+            }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<?>>() {
+                @Override
+                public MultipleSubqueryInitiator<?> apply(String expression) {
+                    return criteriaBuilder.whereExpressionSubqueries(expression);
+                }
+            });
         }
     }
 
@@ -423,7 +461,7 @@ public class BlazeCriteriaBuilderRenderer<T> {
 
     private <X extends FromBuilder<X>> X renderJoins(QueryMetadata metadata, FromBaseBuilder<X> fromBuilder) {
         X criteriaBuilder = null;
-        for (JoinExpression joinExpression : metadata.getJoins()) {
+        for (final JoinExpression joinExpression : metadata.getJoins()) {
             boolean fetch = joinExpression.hasFlag(JPAQueryMixin.FETCH);
             boolean hasCondition = joinExpression.getCondition() != null;
             Expression<?> target = joinExpression.getTarget();
@@ -504,8 +542,18 @@ public class BlazeCriteriaBuilderRenderer<T> {
                             if (!hasCondition) {
                                 throw new IllegalStateException("No on-clause for entity join!");
                             }
-                            JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(entityPath.getType(), alias, joinType);
-                            setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                            final JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(entityPath.getType(), alias, joinType);
+                            setExpressionSubqueries(joinExpression.getCondition(), new BlazeCriteriaBuilderRenderer.Function<String, X>() {
+                                @Override
+                                public X apply(String expression) {
+                                    return xJoinOnBuilder.setOnExpression(expression);
+                                }
+                            }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<? extends X>>() {
+                                @Override
+                                public MultipleSubqueryInitiator<X> apply(String expression) {
+                                    return xJoinOnBuilder.setOnExpressionSubqueries(expression);
+                                }
+                            });
                         } else if (!hasCondition) {
                             if (fetch) {
                                 ((FullQueryBuilder<?, ?>) criteriaBuilder).joinDefault(renderExpression(entityPath), alias, joinType, fetch);
@@ -513,8 +561,18 @@ public class BlazeCriteriaBuilderRenderer<T> {
                                 criteriaBuilder.joinDefault(renderExpression(entityPath), alias, joinType);
                             }
                         } else {
-                            JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType);
-                            setExpressionSubqueries(joinExpression.getCondition(), xJoinOnBuilder::setOnExpression, xJoinOnBuilder::setOnExpressionSubqueries);
+                            final JoinOnBuilder<X> xJoinOnBuilder = criteriaBuilder.joinOn(renderExpression(entityPath), alias, joinType);
+                            setExpressionSubqueries(joinExpression.getCondition(), new BlazeCriteriaBuilderRenderer.Function<String, X>() {
+                                @Override
+                                public X apply(String expression) {
+                                    return xJoinOnBuilder.setOnExpression(expression);
+                                }
+                            }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<? extends X>>() {
+                                @Override
+                                public MultipleSubqueryInitiator<X> apply(String expression) {
+                                    return xJoinOnBuilder.setOnExpressionSubqueries(expression);
+                                }
+                            });
                         }
 
                         break;
@@ -561,10 +619,20 @@ public class BlazeCriteriaBuilderRenderer<T> {
                             }
 
                             Object o = serializeSubQuery(joinOnBuilderFullSelectCTECriteriaBuilder, target);
-                            JoinOnBuilder<X> joinOnBuilder = o instanceof FinalSetOperationCTECriteriaBuilder ?
+                            final JoinOnBuilder<X> joinOnBuilder = o instanceof FinalSetOperationCTECriteriaBuilder ?
                                     ((FinalSetOperationCTECriteriaBuilder<JoinOnBuilder<X>>) o).end() :
                                     ((FullSelectCTECriteriaBuilder<JoinOnBuilder<X>>) o).end();
-                            criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), joinOnBuilder::setOnExpression, joinOnBuilder::setOnExpressionSubqueries);
+                            criteriaBuilder = setExpressionSubqueries(joinExpression.getCondition(), new BlazeCriteriaBuilderRenderer.Function<String, X>() {
+                                @Override
+                                public X apply(String expression) {
+                                    return joinOnBuilder.setOnExpression(expression);
+                                }
+                            }, new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<? extends X>>() {
+                                @Override
+                                public MultipleSubqueryInitiator<X> apply(String expression) {
+                                    return joinOnBuilder.setOnExpressionSubqueries(expression);
+                                }
+                            });
                         } else {
                             if (isLateral) {
                                 FullSelectCTECriteriaBuilder<X> xFullSelectCTECriteriaBuilder;
@@ -589,7 +657,6 @@ public class BlazeCriteriaBuilderRenderer<T> {
                     }
                 }
             } else {
-                // TODO Handle Treat operations
                 throw new UnsupportedOperationException("Joins for " + target + " is not yet implemented");
             }
         }
@@ -639,7 +706,7 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
     }
 
-    private void renderSingleSelect(Expression<?> select, SelectBuilder<?> selectBuilder) {
+    private void renderSingleSelect(Expression<?> select, final SelectBuilder<?> selectBuilder) {
         String alias = null;
 
         if (select instanceof Operation<?>) {
@@ -652,8 +719,18 @@ public class BlazeCriteriaBuilderRenderer<T> {
 
         final String finalAlias = alias;
         setExpressionSubqueries(select,
-                (expression) -> finalAlias != null ? selectBuilder.select(expression, finalAlias) : selectBuilder.select(expression),
-                (expression) -> finalAlias != null ? selectBuilder.selectSubqueries(expression, finalAlias) : selectBuilder.selectSubqueries(expression));
+                new BlazeCriteriaBuilderRenderer.Function<String, Object>() {
+                    @Override
+                    public Object apply(String expression) {
+                        return finalAlias != null ? selectBuilder.select(expression, finalAlias) : selectBuilder.select(expression);
+                    }
+                },
+                new BlazeCriteriaBuilderRenderer.Function<String, MultipleSubqueryInitiator<?>>() {
+                    @Override
+                    public MultipleSubqueryInitiator<?> apply(String expression) {
+                        return finalAlias != null ? selectBuilder.selectSubqueries(expression, finalAlias) : selectBuilder.selectSubqueries(expression);
+                    }
+                });
     }
 
     private String renderExpression(Expression<?> select) {
@@ -682,6 +759,11 @@ public class BlazeCriteriaBuilderRenderer<T> {
     }
 
     private List<Path<?>> cteAliases;
+
+    // Drop in for java.util.Function, TODO: fix after JDK 8
+    private interface Function<T, R> {
+        R apply(T t);
+    }
 
     private <X> X setExpressionSubqueries(Expression<?> expression, Function<String, ? extends X> setExpression, Function<String, MultipleSubqueryInitiator<? extends X>> setExpressionSubqueries) {
         String expressionString = renderExpression(expression);
@@ -858,7 +940,12 @@ public class BlazeCriteriaBuilderRenderer<T> {
             boolean wrap = templates.wrapConstant(constant);
             if (wrap) append("(");
             append(":");
-            append(constantToLabel.computeIfAbsent(constant, o -> "param_" + constantToLabel.size()));
+            String label = constantToLabel.get(constant);
+            if (label == null) {
+                label = "param_" + constantToLabel.size();
+                constantToLabel.put(constant, label);
+            }
+            append(label);
             if (wrap) append(")");
         }
 
@@ -875,7 +962,12 @@ public class BlazeCriteriaBuilderRenderer<T> {
         }
 
         private void renderSubQueryExpression(Expression<?> query) {
-            serializer.append(subQueryToLabel.computeIfAbsent(query, o -> "generatedSubquery_" + (subQueryToLabel.size() + 1)));
+            String label = subQueryToLabel.get(query);
+            if (label == null) {
+                label = "generatedSubquery_" + (subQueryToLabel.size() + 1);
+                subQueryToLabel.put(query, label);
+            }
+            serializer.append(label);
         }
 
         @Override
@@ -920,7 +1012,7 @@ public class BlazeCriteriaBuilderRenderer<T> {
                         return;
                     case WITH_RECURSIVE_COLUMNS:
                     case WITH_COLUMNS:
-                        cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<>());
+                        cteAliases = args.get(1).accept(new CteAttributesVisitor(), new ArrayList<Path<?>>());
                         return;
                 }
             }
@@ -1016,7 +1108,47 @@ public class BlazeCriteriaBuilderRenderer<T> {
                         }, null);
                         break;
                     case WINDOW_PARTITION_BY:
-                        window = window.partitionBy(renderExpression(arguments.get(0)));
+                        window = operation.getArgs().get(0).accept(new Visitor<WindowBuilder<X>, WindowBuilder<X>>() {
+                            @Override
+                            public WindowBuilder<X> visit(Constant<?> expr, WindowBuilder<X> window) {
+                                return window.partitionBy(renderExpression(expr));
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(FactoryExpression<?> expr, WindowBuilder<X> window) {
+                                throw new UnsupportedOperationException();
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(Operation<?> operation, WindowBuilder<X> window) {
+                                if (operation.getOperator() == Ops.LIST) {
+                                    window = operation.getArg(0).accept(this, window);
+                                    return operation.getArg(1).accept(this, window);
+                                } else {
+                                    return window.partitionBy(renderExpression(operation));
+                                }
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(ParamExpression<?> expr, WindowBuilder<X> window) {
+                                return window.partitionBy(renderExpression(expr));
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(Path<?> expr, WindowBuilder<X> window) {
+                                return window.partitionBy(renderExpression(expr));
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(SubQueryExpression<?> expr, WindowBuilder<X> window) {
+                                return window.partitionBy(renderExpression(expr));
+                            }
+
+                            @Override
+                            public WindowBuilder<X> visit(TemplateExpression<?> expr, WindowBuilder<X> window) {
+                                return window.partitionBy(renderExpression(expr));
+                            }
+                        }, window);
                         break;
                     case WINDOW_ROWS:
                         rows = window.rows();

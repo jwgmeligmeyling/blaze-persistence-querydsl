@@ -8,6 +8,10 @@
         <version>1.0-SNAPSHOT</version>
         <relativePath>../</relativePath>
     </parent>
+    <properties>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+    </properties>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>blaze-persistence-querydsl-expressions</artifactId>
     <dependencies>
@@ -69,11 +73,6 @@
                             <name>apiNote</name>
                             <placement>a</placement>
                             <head>API Note:</head>
-                        </tag>
-                        <tag>
-                            <name>example</name>
-                            <placement>a</placement>
-                            <head>Example use:</head>
                         </tag>
                     </tags>
                     <additionalDependencies>

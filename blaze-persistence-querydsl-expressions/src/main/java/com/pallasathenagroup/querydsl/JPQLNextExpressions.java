@@ -15,47 +15,52 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.Map;
 
+/**
+ * Utility methods for creating JPQL.next expressions
+ *
+ * @author Jan-Willem Gmelig Meyling
+ */
 public class JPQLNextExpressions {
 
-    private static final Map<ChronoUnit, Operator> DATE_ADD_OPS
-            = new EnumMap<ChronoUnit, Operator>(ChronoUnit.class);
-    private static final Map<ChronoUnit, Operator> DATE_DIFF_OPS
-                    = new EnumMap<ChronoUnit, Operator>(ChronoUnit.class);
-    private static final Map<ChronoUnit, Operator> DATE_TRUNC_OPS
-                            = new EnumMap<ChronoUnit, Operator>(ChronoUnit.class);
+    private static final Map<DatePart, Operator> DATE_ADD_OPS
+            = new EnumMap<DatePart, Operator>(DatePart.class);
+    private static final Map<DatePart, Operator> DATE_DIFF_OPS
+                    = new EnumMap<DatePart, Operator>(DatePart.class);
+    private static final Map<DatePart, Operator> DATE_TRUNC_OPS
+                            = new EnumMap<DatePart, Operator>(DatePart.class);
 
     static {
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.YEARS, Ops.DateTimeOps.ADD_YEARS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.MONTHS, Ops.DateTimeOps.ADD_MONTHS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.WEEKS, Ops.DateTimeOps.ADD_WEEKS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.DAYS, Ops.DateTimeOps.ADD_DAYS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.HOURS, Ops.DateTimeOps.ADD_HOURS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.MINUTES, Ops.DateTimeOps.ADD_MINUTES);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.SECONDS, Ops.DateTimeOps.ADD_SECONDS);
-        JPQLNextExpressions.DATE_ADD_OPS.put(ChronoUnit.MILLIS, null); // TODO
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.year, Ops.DateTimeOps.ADD_YEARS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.month, Ops.DateTimeOps.ADD_MONTHS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.week, Ops.DateTimeOps.ADD_WEEKS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.day, Ops.DateTimeOps.ADD_DAYS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.hour, Ops.DateTimeOps.ADD_HOURS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.minute, Ops.DateTimeOps.ADD_MINUTES);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.second, Ops.DateTimeOps.ADD_SECONDS);
+        JPQLNextExpressions.DATE_ADD_OPS.put(DatePart.millisecond, null); // TODO
 
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.YEARS, Ops.DateTimeOps.DIFF_YEARS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.MONTHS, Ops.DateTimeOps.DIFF_MONTHS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.WEEKS, Ops.DateTimeOps.DIFF_WEEKS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.DAYS, Ops.DateTimeOps.DIFF_DAYS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.HOURS, Ops.DateTimeOps.DIFF_HOURS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.MINUTES, Ops.DateTimeOps.DIFF_MINUTES);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.SECONDS, Ops.DateTimeOps.DIFF_SECONDS);
-        JPQLNextExpressions.DATE_DIFF_OPS.put(ChronoUnit.MILLIS, null); // TODO
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.year, Ops.DateTimeOps.DIFF_YEARS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.month, Ops.DateTimeOps.DIFF_MONTHS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.week, Ops.DateTimeOps.DIFF_WEEKS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.day, Ops.DateTimeOps.DIFF_DAYS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.hour, Ops.DateTimeOps.DIFF_HOURS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.minute, Ops.DateTimeOps.DIFF_MINUTES);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.second, Ops.DateTimeOps.DIFF_SECONDS);
+        JPQLNextExpressions.DATE_DIFF_OPS.put(DatePart.millisecond, null); // TODO
 
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.YEARS, Ops.DateTimeOps.TRUNC_YEAR);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.MONTHS, Ops.DateTimeOps.TRUNC_MONTH);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.WEEKS, Ops.DateTimeOps.TRUNC_WEEK);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.DAYS, Ops.DateTimeOps.TRUNC_DAY);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.HOURS, Ops.DateTimeOps.TRUNC_HOUR);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.MINUTES, Ops.DateTimeOps.TRUNC_MINUTE);
-        JPQLNextExpressions.DATE_TRUNC_OPS.put(ChronoUnit.SECONDS, Ops.DateTimeOps.TRUNC_SECOND);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.year, Ops.DateTimeOps.TRUNC_YEAR);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.month, Ops.DateTimeOps.TRUNC_MONTH);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.week, Ops.DateTimeOps.TRUNC_WEEK);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.day, Ops.DateTimeOps.TRUNC_DAY);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.hour, Ops.DateTimeOps.TRUNC_HOUR);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.minute, Ops.DateTimeOps.TRUNC_MINUTE);
+        JPQLNextExpressions.DATE_TRUNC_OPS.put(DatePart.second, Ops.DateTimeOps.TRUNC_SECOND);
     }
 
     /**
@@ -129,13 +134,12 @@ public class JPQLNextExpressions {
      * Create a new detached JPQLQuery instance with the given projection
      *
      * @param expr projection and source
-     * @param <T>
+     * @param <T> result type
      * @return select(expr).from(expr)
      */
     public static <T> BlazeJPAQuery<T> selectFrom(EntityPath<T> expr) {
         return select(expr).from(expr);
     }
-
 
     /**
      * Create a avg(col) expression
@@ -195,7 +199,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> DateTimeExpression<D> dateadd(ChronoUnit unit, DateTimeExpression<D> date, int amount) {
+    public static <D extends Comparable<?>> DateTimeExpression<D> dateadd(DatePart unit, DateTimeExpression<D> date, int amount) {
         return Expressions.dateTimeOperation(date.getType(), DATE_ADD_OPS.get(unit), date, ConstantImpl.create(amount));
     }
 
@@ -210,7 +214,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#dateadd(com.querydsl.sql.DatePart, DateExpression, int)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> DateExpression<D> dateadd(ChronoUnit unit, DateExpression<D> date, int amount) {
+    public static <D extends Comparable<?>> DateExpression<D> dateadd(DatePart unit, DateExpression<D> date, int amount) {
         return Expressions.dateOperation(date.getType(), DATE_ADD_OPS.get(unit), date, ConstantImpl.create(amount));
     }
 
@@ -222,10 +226,10 @@ public class JPQLNextExpressions {
      * @param end end
      * @param <D> date type
      * @return difference in units
-     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
+     * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, DateExpression, DateExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                                DateExpression<D> start, DateExpression<D> end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), start, end);
     }
@@ -241,7 +245,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                             D start, DateExpression<D> end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), ConstantImpl.create(start), end);
     }
@@ -257,7 +261,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                             DateExpression<D> start, D end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), start, ConstantImpl.create(end));
     }
@@ -273,7 +277,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                             DateTimeExpression<D> start, DateTimeExpression<D> end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), start, end);
     }
@@ -289,7 +293,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                             D start, DateTimeExpression<D> end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), ConstantImpl.create(start), end);
     }
@@ -305,7 +309,7 @@ public class JPQLNextExpressions {
      * @see com.querydsl.sql.SQLExpressions#datediff(com.querydsl.sql.DatePart, Comparable, DateTimeExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(ChronoUnit unit,
+    public static <D extends Comparable<?>> NumberExpression<Integer> datediff(DatePart unit,
                                                                             DateTimeExpression<D> start, D end) {
         return Expressions.numberOperation(Integer.class, DATE_DIFF_OPS.get(unit), start, ConstantImpl.create(end));
     }
@@ -316,10 +320,11 @@ public class JPQLNextExpressions {
      * @param unit date part to truncate to
      * @param expr truncated date
      * @param <D> date type
+     * @return date trunc expression
      * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> DateExpression<D> datetrunc(ChronoUnit unit, DateExpression<D> expr) {
+    public static <D extends Comparable<?>> DateExpression<D> datetrunc(DatePart unit, DateExpression<D> expr) {
         return Expressions.dateOperation(expr.getType(), DATE_TRUNC_OPS.get(unit), expr);
     }
 
@@ -329,10 +334,11 @@ public class JPQLNextExpressions {
      * @param unit com.querydsl.sql.DatePart to truncate to
      * @param expr truncated datetime
      * @param <D> date type
+     * @return date trunc expression
      * @see com.querydsl.sql.SQLExpressions#datetrunc(com.querydsl.sql.DatePart, DateTimeExpression)
      * @since 1.0
      */
-    public static <D extends Comparable<?>> DateTimeExpression<D> datetrunc(ChronoUnit unit, DateTimeExpression<D> expr) {
+    public static <D extends Comparable<?>> DateTimeExpression<D> datetrunc(DatePart unit, DateTimeExpression<D> expr) {
         return Expressions.dateTimeOperation(expr.getType(), DATE_TRUNC_OPS.get(unit), expr);
     }
 
@@ -790,6 +796,7 @@ public class JPQLNextExpressions {
      *
      * @param expr measure expression
      * @param n one based row index
+     * @param <T> number expression type
      * @return nth_value(expr, n)
      * @since 1.0
      */
@@ -886,55 +893,147 @@ public class JPQLNextExpressions {
         return new WindowOver<T>(expr.getType(), JPQLNextOps.LAST_VALUE, expr);
     }
 
+    /**
+     * Returns the greatest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return greatest operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> greatest(T a, Expression<T> b) {
         return greatest(Expressions.constant(a), b);
     }
 
+    /**
+     * Returns the greatest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return greatest operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> greatest(Expression<T> a, T b) {
         return greatest(a, Expressions.constant(b));
     }
 
-
+    /**
+     * Returns the greatest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return greatest operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> greatest(Expression<T> a, Expression<T> b) {
         return Expressions.operation(a.getType(), JPQLNextOps.GREATEST, a, b);
     }
-
+    /**
+     * Returns the smallest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return least operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> least(T a, Expression<T> b) {
         return least(Expressions.constant(a), b);
     }
 
+    /**
+     * Returns the smallest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return least operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> least(Expression<T> a, T b) {
         return least(a, Expressions.constant(b));
     }
 
+    /**
+     * Returns the smallest value of all given arguments.
+     *
+     * @param a lhs
+     * @param b rhs
+     * @param <T> type
+     * @return least operation
+     */
     public static <T extends Comparable<? super T>> Expression<T> least(Expression<T> a, Expression<T> b) {
         return Expressions.operation(a.getType(), JPQLNextOps.LEAST, a, b);
     }
 
-
+    /**
+     * Create a literal expression for the specified value.
+     *
+     * @param clasz type
+     * @param value value to render as literal
+     * @param <T> value type
+     * @return the literal value
+     */
     public static <T extends Comparable<? super T>> Expression<T> literal(Class<T> clasz, T value) {
         return (Expression) Expressions.template(clasz, JPQLNextTemplates.DEFAULT.asLiteral(value));
     }
 
-
+    /**
+     * Create a literal expression for the specified value.
+     *
+     * @param value value to render as literal
+     * @param <T> value type
+     * @return the literal value
+     */
     public static <T extends Comparable<? super T>> Expression<T> literal(T value) {
         return (Expression) Expressions.template(value.getClass(), JPQLNextTemplates.DEFAULT.asLiteral(value));
     }
 
-
-    public static <T> Expression<T> groupConcat(Expression<T> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
+    /**
+     * Aggregates/concatenates the values produced by expression to a single string separated by {@code separator} in the order defined by the {@code orderSpecifiers}.
+     *
+     * @param expression Expression to aggregate
+     * @param separator Separator to aggregate by
+     * @param orderSpecifiers Order specificers for the values
+     * @return Group concat expression
+     */
+    public static StringExpression groupConcat(Expression<?> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
         return groupConcat(false, expression, ConstantImpl.create(separator), orderSpecifiers);
     }
 
-    public static <T> Expression<T> groupConcat(Expression<T> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
+    /**
+     * Aggregates/concatenates the values produced by expression to a single string separated by {@code separator} in the order defined by the {@code orderSpecifiers}.
+     *
+     * @param expression Expression to aggregate
+     * @param separator Separator to aggregate by
+     * @param orderSpecifiers Order specificers for the values
+     * @return Group concat expression
+     */
+    public static StringExpression groupConcat(Expression<?> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
         return groupConcat(false, expression, separator, orderSpecifiers);
     }
 
-    public static <T> Expression<T> groupConcat(boolean distinct, Expression<T> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
+    /**
+     * Aggregates/concatenates the values produced by expression to a single string separated by {@code separator} in the order defined by the {@code orderSpecifiers}.
+     *
+     * @param distinct Filter unique results
+     * @param expression Expression to aggregate
+     * @param separator Separator to aggregate by
+     * @param orderSpecifiers Order specificers for the values
+     * @return Group concat expression
+     */
+    public static StringExpression groupConcat(boolean distinct, Expression<?> expression, String separator, OrderSpecifier<?>... orderSpecifiers) {
         return groupConcat(distinct, expression, ConstantImpl.create(separator), orderSpecifiers);
     }
 
-    public static <T> Expression<T> groupConcat(boolean distinct, Expression<T> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
+    /**
+     * Aggregates/concatenates the values produced by expression to a single string separated by {@code separator} in the order defined by the {@code orderSpecifiers}.
+     *
+     * @param distinct Filter unique results
+     * @param expression Expression to aggregate
+     * @param separator Separator to aggregate by
+     * @param orderSpecifiers Order specificers for the values
+     * @return Group concat expression
+     */
+    public static StringExpression groupConcat(boolean distinct, Expression<?> expression, Expression<String> separator, OrderSpecifier<?>... orderSpecifiers) {
         StringBuilder template = new StringBuilder();
         Expression<?>[] arguments = new Expression[2+orderSpecifiers.length*2];
         arguments[0] = expression;
@@ -957,9 +1056,19 @@ public class JPQLNextExpressions {
         }
 
         template.append(")");
-        return Expressions.template(expression.getType(), template.toString(), arguments);
+        return Expressions.stringTemplate(template.toString(), Arrays.asList(arguments));
     }
 
+    /**
+     * A cast invocation will always generate a ANSI SQL cast.
+     * The SQL data type for a Java type is determined by {@code DbmsDialect.getSqlType()}.
+     * By providing a custom DBMS dialect you can override these types.
+     *
+     * @param result Type to cast the value as
+     * @param expression Expression
+     * @param <T> Expression type
+     * @return The casted expression
+     */
     public static <T> Expression<T> cast(Class<T> result, Expression<?> expression) {
         if (Boolean.class.equals(result) || boolean.class.equals(result)) {
             return Expressions.simpleOperation(result, JPQLNextOps.CAST_BOOLEAN, expression);
@@ -996,6 +1105,17 @@ public class JPQLNextExpressions {
         }
     }
 
+    /**
+     * A treat invocation will only adjust the type of the expression in the JPQL expression and not cause an explicit cast on the DBMS side.
+     * This can be used for cases when the type of an expression is actually known but can’t be inferred.
+     *
+     * <em>This function is used internally and no user should ever have the need for this!</em>
+     *
+     * @param result Type to treat the value as
+     * @param expression Expression
+     * @param <T> Expression type
+     * @return The treated expression
+     */
     public static <T> Expression<T> treat(Class<T> result, Expression<?> expression) {
         if (Boolean.class.equals(result) || boolean.class.equals(result)) {
             return Expressions.simpleOperation(result, JPQLNextOps.TREAT_BOOLEAN, expression);
@@ -1032,7 +1152,16 @@ public class JPQLNextExpressions {
         }
     }
 
-    public static <T> Operation<T> bind(Path<? super T> path, Expression<? extends T> expression) {
+    /**
+     * Create a CTE bind expression.
+     *
+     * @param path Path expression to bind
+     * @param expression Value to which path should be bound
+     * @param <T> Common type for path  and value
+     * @return Operation result
+     */
+    public static <T> Operation<T> bind(Path<? super T> path, Expression<T> expression) {
         return ExpressionUtils.operation(expression.getType(), JPQLNextOps.BIND, expression, path);
     }
+
 }

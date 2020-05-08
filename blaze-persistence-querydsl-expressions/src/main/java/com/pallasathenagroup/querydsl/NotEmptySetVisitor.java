@@ -1,8 +1,9 @@
 package com.pallasathenagroup.querydsl;
 
-import com.querydsl.core.QueryFlag;
 import com.querydsl.core.types.Operation;
 import com.querydsl.core.types.SubQueryExpression;
+
+import static com.pallasathenagroup.querydsl.SetOperationFlag.getSetOperationFlag;
 
 /**
  * Visitor implementation that checks if a query is empty (i.e. has no default joins).
@@ -22,9 +23,8 @@ public class NotEmptySetVisitor extends DefaultVisitorImpl<Boolean, Void> {
 
     @Override
     public Boolean visit(SubQueryExpression<?> subQueryExpression, Void aVoid) {
-        return subQueryExpression.getMetadata().getFlags().stream()
-                .anyMatch(flag -> flag.getPosition().equals(QueryFlag.Position.START_OVERRIDE) &&
-                        flag.getFlag().accept(NotEmptySetVisitor.this, aVoid)) ||
-                !subQueryExpression.getMetadata().getJoins().isEmpty();
+        SetOperationFlag setOperationFlag = getSetOperationFlag(subQueryExpression.getMetadata());
+        return setOperationFlag != null && setOperationFlag.getFlag().accept(this, aVoid)
+                || !subQueryExpression.getMetadata().getJoins().isEmpty();
     }
 }

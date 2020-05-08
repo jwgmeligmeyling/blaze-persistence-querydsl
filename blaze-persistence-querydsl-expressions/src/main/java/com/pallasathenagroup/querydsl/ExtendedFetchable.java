@@ -2,12 +2,8 @@ package com.pallasathenagroup.querydsl;
 
 import com.blazebit.persistence.KeysetPage;
 import com.blazebit.persistence.PagedList;
-import com.blazebit.persistence.PaginatedCriteriaBuilder;
 import com.blazebit.persistence.Queryable;
 import com.querydsl.core.Fetchable;
-import com.querydsl.core.NonUniqueResultException;
-
-import java.util.Optional;
 
 /**
  * Extension for {@code Fetchable}
@@ -40,26 +36,6 @@ public interface ExtendedFetchable<T> extends Fetchable<T>  {
      * @see com.blazebit.persistence.FullQueryBuilder#page(KeysetPage, int, int)
      */
     PagedList<T> fetchPage(KeysetPage keysetPage, int firstResult, int maxResults);
-
-    /**
-     * Wrap the result of {@link #fetchOne()} inside an {@code Optional}.
-     *
-     * @return Optional query result
-     * @throws NonUniqueResultException If the result was not unique
-     * @since 1.0
-     */
-    default Optional<T> fetchOneOptional() throws NonUniqueResultException {
-        return Optional.ofNullable(fetchOne());
-    }
-    /**
-     * Wrap the result of {@link #fetchFirst()} inside an {@code Optional}.
-     *
-     * @return Optional query result
-     * @since 1.0
-     */
-    default Optional<T> fetchFirstOptional() {
-        return Optional.ofNullable(fetchFirst());
-    }
 
     /**
      * Get the query string.

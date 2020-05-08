@@ -7,6 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * {@code FactoryExpression} for representing CTE bindings.
+ *
+ * @param <X> CTE expression result type
+ * @author Jan-Willem Gmelig Meyling
+ */
 public class Binds<X> implements FactoryExpression<X> {
 
     private List<Operation<?>> args = new ArrayList<>();
@@ -18,13 +24,13 @@ public class Binds<X> implements FactoryExpression<X> {
 
     @Override
     public List<Expression<?>> getArgs() {
-        return Collections.unmodifiableList(args);
+        return Collections.<Expression<?>> unmodifiableList(args);
     }
 
     @Nullable
     @Override
     public X newInstance(Object... objects) {
-        throw new IllegalStateException("Instances may not be created for CTE");
+        throw new IllegalStateException("Instances may not be created for a CTE binds projection");
     }
 
     @Nullable
